@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import './ChatInterface.css'
 
 interface Message {
@@ -37,7 +38,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {messages.length === 0 ? (
           <div className="welcome-message">
             <h2>🎖️ STRATEGIST REPORTS FOR DUTY</h2>
-            <p>Deploy tactical queries to command headquarters. Request campaign status, faction intel, planetary data, and real-time combat statistics.</p>
+            <p>Execute tactical queries to command headquarters. Request campaign status, faction intel, planetary data, and real-time combat statistics.</p>
             <div className="quick-actions">
               <button 
                 onClick={() => onSendMessage('What is the current war status?')}
@@ -69,10 +70,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.type}`}>
               <div className="message-avatar">
-                {msg.type === 'user' ? '👤' : '🎖️'}
+                {msg.type === 'user' ? '🪖' : '📡'}
+              </div>
+              <div className="message-avatar-label">
+                {/* Labels removed - emoji only */}
               </div>
               <div className="message-content">
-                <p>{msg.content}</p>
+                <div className="message-text">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
                 <span className="message-time">
                   {msg.timestamp.toLocaleTimeString()}
                 </span>
@@ -109,7 +115,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           disabled={loading || !input.trim()}
           className="send-button"
         >
-          {loading ? '⏳ TRANSMIT' : '📤 DEPLOY'}
+          {loading ? '⏳ TRANSMIT' : '⚡ EXECUTE'}
         </button>
       </form>
     </div>

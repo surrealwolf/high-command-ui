@@ -19,12 +19,21 @@ export class ClaudeService {
   private apiKey: string
   private mcpUrl: string = '/mcp'
   private tools: MCPTool[] = []
+  private conversationHistory: Array<{ role: string; content: string }> = []
 
   constructor() {
     this.apiKey = import.meta.env.VITE_CLAUDE_API_KEY || ''
     if (!this.apiKey) {
       console.warn('VITE_CLAUDE_API_KEY not set. Claude integration will not work.')
     }
+  }
+
+  clearConversationHistory(): void {
+    this.conversationHistory = []
+  }
+
+  getConversationHistory(): Array<{ role: string; content: string }> {
+    return this.conversationHistory
   }
 
   async getAvailableTools(): Promise<MCPTool[]> {
@@ -129,7 +138,22 @@ export class ClaudeService {
           model: 'claude-haiku-4-5',
           max_tokens: 1024,
           tools: claudeTools,
+          system: `You are a tactical AI assistant for Hell Divers 2 command. Format your responses in clear, readable Markdown.
+
+IMPORTANT: Do NOT use markdown tables (with pipes |). Instead, present data using:
+- **Bold headers** with colons for key information
+- Bullet points for lists
+- Numbered lists for sequences
+- Inline code for values using backticks
+- Code blocks for structured data using triple backticks
+
+Example format for data:
+**Metric Name:** value
+**Another Metric:** value
+
+Use clear hierarchy with headers (## and ###) and emphasis for important information.`,
           messages: [
+            ...this.conversationHistory,
             {
               role: 'user',
               content: userMessage
@@ -149,10 +173,10 @@ export class ClaudeService {
       let finalResponse = ''
       let toolCalls: Array<{name: string; input: ToolInput}> = []
 
-      // Extract content blocks
+      // Extract content blocks - concatenate all text blocks
       for (const block of data.content) {
         if (block.type === 'text') {
-          finalResponse = block.text
+          finalResponse += block.text
         } else if (block.type === 'tool_use') {
           toolCalls.push({
             name: block.name,
@@ -201,6 +225,7 @@ export class ClaudeService {
             model: 'claude-haiku-4-5',
             max_tokens: 1024,
             tools: claudeTools,
+            system: 'You are a tactical AI assistant for Hell Divers 2 command. Format your responses in Markdown with clear sections, bullet points, and emphasis. Use headers, bold, italics, and code blocks as appropriate.',
             messages: [
               {
                 role: 'user',
@@ -224,13 +249,36 @@ export class ClaudeService {
 
         const followUpData = await followUpResponse.json()
         
-        // Extract final text response
+        // Extract final text response - concatenate all text blocks
+        let finalText = ''
         for (const block of followUpData.content) {
           if (block.type === 'text') {
-            return block.text
+            finalText += block.text
           }
         }
+        
+        // Store in conversation history
+        this.conversationHistory.push({
+          role: 'user',
+          content: userMessage
+        })
+        this.conversationHistory.push({
+          role: 'assistant',
+          content: finalText || 'No response from Claude'
+        })
+        
+        return finalText || 'No response from Claude'
       }
+
+      // Store in conversation history (no tool calls)
+      this.conversationHistory.push({
+        role: 'user',
+        content: userMessage
+      })
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: finalResponse || 'No response from Claude'
+      })
 
       return finalResponse || 'No response from Claude'
     } catch (error) {
