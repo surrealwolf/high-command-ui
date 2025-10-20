@@ -114,9 +114,37 @@ docker-compose -f docker-compose.dev.yml up
 - **docker-compose.yml** - Production compose stack with High Command API
 - **.dockerignore** - Exclude unnecessary files from Docker builds
 
+## Configuration
+
+The application uses environment variables for configuration. Create a `.env` file in the project root with your settings:
+
+```bash
+cp .env.example .env
+```
+
+### Environment Variables
+
+- `VITE_API_URL` - API server endpoint (default: `http://localhost:5000/api`)
+- `VITE_MCP_URL` - MCP server endpoint (default: `http://localhost:8000`)
+
+Example `.env` file:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_MCP_URL=http://localhost:8000
+```
+
+For Docker deployments, you can pass environment variables:
+
+```bash
+docker run -e VITE_API_URL=http://api-server:5000/api -p 3000:3000 high-command-ui:latest
+```
+
 ## API Integration
 
 The UI communicates with the High Command MCP Server via REST endpoints:
+
+### Available Endpoints
 
 - `POST /api/command` - Execute a strategic command
 - `GET /api/war-status` - Fetch current war status
@@ -126,15 +154,6 @@ The UI communicates with the High Command MCP Server via REST endpoints:
 - `GET /api/biomes` - Get biome information
 - `GET /api/statistics` - Get game statistics
 - `GET /api/planets/:index` - Get specific planet status
-
-## Configuration
-
-The API base URL is configured in `src/services/api.ts`. By default it points to:
-```
-http://localhost:3001/api
-```
-
-Update this if your High Command server runs on a different port or host.
 
 ## Technologies
 

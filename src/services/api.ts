@@ -2,7 +2,20 @@
 // This service handles communication with the High Command backend
 
 class HighCommandAPI {
-  private baseUrl: string = 'http://localhost:3001/api'
+  private baseUrl: string = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  private mcpUrl: string = import.meta.env.VITE_MCP_URL || 'http://localhost:8000'
+
+  constructor() {
+    console.log('API Server:', this.baseUrl)
+    console.log('MCP Server:', this.mcpUrl)
+  }
+
+  private async handleResponse(response: Response) {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    return await response.json()
+  }
 
   async executeCommand(prompt: string): Promise<string> {
     try {
@@ -14,13 +27,10 @@ class HighCommandAPI {
         body: JSON.stringify({ prompt })
       })
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      return data.response || 'No response received'
+      const data = await this.handleResponse(response)
+      return data.response || data.message || 'No response received'
     } catch (error) {
+      console.error('Command error:', error)
       throw new Error(`Failed to execute command: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -28,8 +38,7 @@ class HighCommandAPI {
   async getWarStatus() {
     try {
       const response = await fetch(`${this.baseUrl}/war-status`)
-      if (!response.ok) throw new Error('Failed to fetch war status')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching war status:', error)
       return null
@@ -39,8 +48,7 @@ class HighCommandAPI {
   async getCampaignInfo() {
     try {
       const response = await fetch(`${this.baseUrl}/campaign`)
-      if (!response.ok) throw new Error('Failed to fetch campaign info')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching campaign info:', error)
       return null
@@ -50,8 +58,7 @@ class HighCommandAPI {
   async getPlanets() {
     try {
       const response = await fetch(`${this.baseUrl}/planets`)
-      if (!response.ok) throw new Error('Failed to fetch planets')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching planets:', error)
       return null
@@ -61,8 +68,7 @@ class HighCommandAPI {
   async getFactions() {
     try {
       const response = await fetch(`${this.baseUrl}/factions`)
-      if (!response.ok) throw new Error('Failed to fetch factions')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching factions:', error)
       return null
@@ -72,8 +78,7 @@ class HighCommandAPI {
   async getBiomes() {
     try {
       const response = await fetch(`${this.baseUrl}/biomes`)
-      if (!response.ok) throw new Error('Failed to fetch biomes')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching biomes:', error)
       return null
@@ -83,8 +88,7 @@ class HighCommandAPI {
   async getStatistics() {
     try {
       const response = await fetch(`${this.baseUrl}/statistics`)
-      if (!response.ok) throw new Error('Failed to fetch statistics')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching statistics:', error)
       return null
@@ -94,8 +98,7 @@ class HighCommandAPI {
   async getPlanetStatus(planetIndex: number) {
     try {
       const response = await fetch(`${this.baseUrl}/planets/${planetIndex}`)
-      if (!response.ok) throw new Error('Failed to fetch planet status')
-      return await response.json()
+      return await this.handleResponse(response)
     } catch (error) {
       console.error('Error fetching planet status:', error)
       return null
