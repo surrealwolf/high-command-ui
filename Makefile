@@ -1,5 +1,11 @@
 .PHONY: help install dev build preview run test lint format clean docker-build docker-run docker-stop docker-clean docker-dev check check-all info
 
+# Load environment variables from .env if it exists
+ifneq (,$(wildcard .env))
+  include .env
+  export $(shell sed 's/=.*//' .env)
+endif
+
 # Default target
 help:
 	@echo "High Command UI - React TypeScript Application"

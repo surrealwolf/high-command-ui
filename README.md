@@ -124,20 +124,20 @@ cp .env.example .env
 
 ### Environment Variables
 
-- `VITE_API_URL` - API server endpoint (default: `http://localhost:5000/api`)
+- `VITE_API_URL` - High Command API server base URL (default: `http://localhost:5000`)
 - `VITE_MCP_URL` - MCP server endpoint (default: `http://localhost:8000`)
 
 Example `.env` file:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5000
 VITE_MCP_URL=http://localhost:8000
 ```
 
 For Docker deployments, you can pass environment variables:
 
 ```bash
-docker run -e VITE_API_URL=http://api-server:5000/api -p 3000:3000 high-command-ui:latest
+docker run -e VITE_API_URL=http://api-server:5000 -p 3000:3000 high-command-ui:latest
 ```
 
 ## API Integration
