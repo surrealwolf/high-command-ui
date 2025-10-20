@@ -8,25 +8,25 @@ const DataDisplay: React.FC<DataDisplayProps> = ({ warStatus }) => {
   return (
     <div className="data-display">
       <div className="data-section">
-        <h2>🎖️ Campaign Information</h2>
-        <p>Real-time campaign data and statistics will appear here as you interact with the High Command system.</p>
+        <h2>🎖️ TACTICAL HEADQUARTERS</h2>
+        <p>Real-time campaign telemetry and strategic intelligence will appear here as you interact with the High Command system. All information is classified and for strategic purposes only.</p>
       </div>
 
       {warStatus && (
         <div className="data-section">
-          <h3>Current War Status</h3>
+          <h3>⚔️ CURRENT WAR STATUS</h3>
           <pre>{JSON.stringify(warStatus, null, 2)}</pre>
         </div>
       )}
 
       <div className="data-section">
-        <h3>Available Commands</h3>
+        <h3>📡 AVAILABLE TACTICAL COMMANDS</h3>
         <ul className="command-list">
-          <li><code>Get war status</code> - Retrieve current campaign status</li>
-          <li><code>Show planets</code> - List all planets in the campaign</li>
-          <li><code>Get factions</code> - Display faction information</li>
-          <li><code>Get biomes</code> - Information about planetary biomes</li>
-          <li><code>Get statistics</code> - Global game statistics</li>
+          <li><code>Get war status</code> - Retrieve current campaign tactical data</li>
+          <li><code>Show planets</code> - List all strategic planetary objectives</li>
+          <li><code>Get factions</code> - Display faction military intelligence</li>
+          <li><code>Get biomes</code> - Planetary terrain and biome classification data</li>
+          <li><code>Get statistics</code> - Global combat and campaign statistics</li>
         </ul>
       </div>
     </div>

@@ -66,8 +66,8 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-content">
-          <h1>⚔️ High Command Strategic Interface</h1>
-          <p className="subtitle">Real-time War Campaign Management System</p>
+          <h1>⚔️ HELLDIVERS 2: STRATEGIC COMMAND</h1>
+          <p className="subtitle">DEMOCRACY SPREADS - WAR CAMPAIGN TACTICAL INTERFACE</p>
         </div>
       </header>
 
@@ -77,13 +77,13 @@ function App() {
             className={`tab ${activeTab === 'chat' ? 'active' : ''}`}
             onClick={() => setActiveTab('chat')}
           >
-            💬 Command Prompt
+            � TACTICAL PROMPT
           </button>
           <button 
             className={`tab ${activeTab === 'data' ? 'active' : ''}`}
             onClick={() => setActiveTab('data')}
           >
-            📊 Campaign Data
+            📊 WAR READOUTS
           </button>
         </nav>
 

@@ -1,12 +1,13 @@
-/* Data Display Styles */
+/* Hell Divers 2 Tactical Data Display */
 
 .data-display {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
   gap: 20px;
+  background: linear-gradient(135deg, #0a0a0a 0%, #15151a 100%);
 }
 
 .data-display::-webkit-scrollbar {
@@ -14,51 +15,88 @@
 }
 
 .data-display::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 179, 0, 0.02);
 }
 
 .data-display::-webkit-scrollbar-thumb {
   background: var(--accent-color);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .data-section {
-  background: var(--secondary-color);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--accent-color);
-  border-radius: 8px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border: 2px solid var(--accent-color);
+  border-left: 4px solid var(--accent-color);
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 20px rgba(255, 179, 0, 0.15), inset 0 0 10px rgba(255, 179, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.data-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 179, 0, 0.02) 0px,
+    rgba(255, 179, 0, 0.02) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
 }
 
 .data-section h2 {
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 12px;
-  color: var(--text-light);
+  color: var(--success-green);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 10px rgba(102, 255, 0, 0.5);
 }
 
 .data-section h3 {
-  font-size: 16px;
+  font-size: 14px;
   margin-bottom: 12px;
   color: var(--accent-color);
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 8px rgba(255, 179, 0, 0.4);
 }
 
 .data-section p {
   color: var(--text-light);
-  line-height: 1.6;
-  opacity: 0.9;
+  line-height: 1.7;
+  opacity: 0.95;
   margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  letter-spacing: 0.5px;
 }
 
 .data-section pre {
-  background: var(--primary-color);
-  padding: 12px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.9), rgba(21, 21, 26, 0.9));
+  padding: 14px;
   overflow-x: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--success-color);
-  line-height: 1.4;
-  border: 1px solid var(--border-color);
+  line-height: 1.6;
+  border: 1px solid rgba(102, 255, 0, 0.3);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 1;
 }
 
 .data-section pre::-webkit-scrollbar {
@@ -66,35 +104,50 @@
 }
 
 .data-section pre::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 179, 0, 0.05);
 }
 
 .data-section pre::-webkit-scrollbar-thumb {
   background: var(--accent-color);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .command-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .command-list li {
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  border-left: 2px solid var(--success-color);
+  padding: 12px 14px;
+  background: linear-gradient(90deg, rgba(45, 90, 45, 0.1), rgba(102, 255, 0, 0.05));
+  border-left: 3px solid var(--success-green);
+  border-right: 1px solid rgba(102, 255, 0, 0.2);
   color: var(--text-light);
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  font-family: 'Courier New', monospace;
+}
+
+.command-list li:hover {
+  background: linear-gradient(90deg, rgba(45, 90, 45, 0.2), rgba(102, 255, 0, 0.1));
+  border-left-color: var(--accent-color);
+  box-shadow: inset 0 0 10px rgba(102, 255, 0, 0.1);
 }
 
 .command-list code {
-  background: var(--primary-color);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Monaco', 'Courier New', monospace;
-  color: var(--accent-color);
-  font-size: 12px;
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.8), rgba(21, 21, 26, 0.8));
+  padding: 3px 8px;
+  border: 1px solid rgba(102, 255, 0, 0.3);
+  border-radius: 0;
+  font-family: 'Courier New', monospace;
+  color: var(--success-green);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin: 0 4px;
 }

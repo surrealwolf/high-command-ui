@@ -36,32 +36,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="messages-container">
         {messages.length === 0 ? (
           <div className="welcome-message">
-            <h2>Welcome to High Command Strategic Interface</h2>
-            <p>Ask about campaign status, faction information, planets, or any strategic queries.</p>
+            <h2>🎖️ STRATEGIST REPORTS FOR DUTY</h2>
+            <p>Deploy tactical queries to command headquarters. Request campaign status, faction intel, planetary data, and real-time combat statistics.</p>
             <div className="quick-actions">
               <button 
                 onClick={() => onSendMessage('What is the current war status?')}
                 className="quick-action"
               >
-                War Status
+                ⚔️ War Status
               </button>
               <button 
                 onClick={() => onSendMessage('Show all factions')}
                 className="quick-action"
               >
-                Factions
+                🏛️ Factions
               </button>
               <button 
                 onClick={() => onSendMessage('List all planets')}
                 className="quick-action"
               >
-                Planets
+                🌍 Planets
               </button>
               <button 
                 onClick={() => onSendMessage('Get campaign info')}
                 className="quick-action"
               >
-                Campaign
+                📋 Campaign
               </button>
             </div>
           </div>
@@ -100,7 +100,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter your command or query..."
+          placeholder="Enter tactical command..."
           disabled={loading}
           className="message-input"
         />
@@ -109,7 +109,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           disabled={loading || !input.trim()}
           className="send-button"
         >
-          {loading ? '⏳' : '📤'}
+          {loading ? '⏳ TRANSMIT' : '📤 DEPLOY'}
         </button>
       </form>
     </div>
