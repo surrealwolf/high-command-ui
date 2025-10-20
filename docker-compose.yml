@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  high-command-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: high-command-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://high-command-api:3001/api
+    depends_on:
+      - high-command-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  high-command-api:
+    image: high-command-api:latest
+    container_name: high-command-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+networks:
+  default:
+    name: high-command-network

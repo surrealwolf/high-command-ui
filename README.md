@@ -37,6 +37,19 @@ src/
 
 ## Setup & Installation
 
+### Using Make (Recommended)
+
+```bash
+make install    # Install dependencies
+make dev        # Start development server (port 3000)
+make build      # Build for production
+make preview    # Preview production build
+make clean      # Clean build artifacts
+make info       # Show project info
+```
+
+### Using npm
+
 1. Install dependencies:
 ```bash
 npm install
@@ -55,6 +68,51 @@ The application will open at `http://localhost:3000`
 npm run build
 npm run preview
 ```
+
+## Docker Support
+
+### Using Make Commands
+
+```bash
+make docker-build   # Build Docker image
+make docker-run     # Run production container on port 3000
+make docker-stop    # Stop and remove container
+make docker-clean   # Remove Docker image
+make docker-dev     # Run development container with hot reload
+```
+
+### Using Docker Directly
+
+**Production Build:**
+```bash
+docker build -t high-command-ui:latest .
+docker run -d -p 3000:3000 -e API_URL=http://localhost:3001/api high-command-ui:latest
+```
+
+**Development with Hot Reload:**
+```bash
+docker build -t high-command-ui:dev -f Dockerfile.dev .
+docker run -it -v $(pwd):/app -p 3000:3000 -e NODE_ENV=development high-command-ui:dev npm run dev
+```
+
+### Using Docker Compose
+
+**Production Stack:**
+```bash
+docker-compose up -d
+```
+
+**Development Stack:**
+```bash
+docker-compose -f docker-compose.dev.yml up
+```
+
+## Docker Files
+
+- **Dockerfile** - Multi-stage production build using Alpine Linux
+- **Dockerfile.dev** - Development environment with hot module replacement
+- **docker-compose.yml** - Production compose stack with High Command API
+- **.dockerignore** - Exclude unnecessary files from Docker builds
 
 ## API Integration
 

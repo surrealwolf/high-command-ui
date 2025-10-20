@@ -1,0 +1,27 @@
+# Development Dockerfile for High Command UI
+# Used for local development with hot module replacement
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+RUN npm install -g npm@latest
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install project dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Expose development server port
+EXPOSE 3000
+
+# Set environment
+ENV NODE_ENV=development
+
+# Run development server with hot reload
+CMD ["npm", "run", "dev"]
