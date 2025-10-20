@@ -91,7 +91,11 @@ class HighCommandAPI {
   async getWarStatus() {
     try {
       const response = await fetch(`${this.baseUrl}/war/status`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching war status: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching war status:', error)
       return null
@@ -101,7 +105,11 @@ class HighCommandAPI {
   async getCampaignInfo() {
     try {
       const response = await fetch(`${this.baseUrl}/campaigns/active`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching campaign info: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching campaign info:', error)
       return null
@@ -111,7 +119,10 @@ class HighCommandAPI {
   async getPlanets() {
     try {
       const response = await fetch(`${this.baseUrl}/planets`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching planets:', error)
       return null
@@ -121,7 +132,11 @@ class HighCommandAPI {
   async getFactions() {
     try {
       const response = await fetch(`${this.baseUrl}/factions`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching factions: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching factions:', error)
       return null
@@ -131,7 +146,11 @@ class HighCommandAPI {
   async getBiomes() {
     try {
       const response = await fetch(`${this.baseUrl}/biomes`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching biomes: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching biomes:', error)
       return null
@@ -141,7 +160,11 @@ class HighCommandAPI {
   async getStatistics() {
     try {
       const response = await fetch(`${this.baseUrl}/statistics`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching statistics: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching statistics:', error)
       return null
@@ -151,9 +174,27 @@ class HighCommandAPI {
   async getPlanetStatus(planetIndex: number) {
     try {
       const response = await fetch(`${this.baseUrl}/planets/${planetIndex}`)
-      return await this.handleResponse(response)
+      if (!response.ok) {
+        console.error(`Error fetching planet status: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
     } catch (error) {
       console.error('Error fetching planet status:', error)
+      return null
+    }
+  }
+
+  async getStatus() {
+    try {
+      const response = await fetch(`${this.baseUrl}/health`)
+      if (!response.ok) {
+        console.error(`Error fetching status: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching status:', error)
       return null
     }
   }

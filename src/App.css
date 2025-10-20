@@ -156,6 +156,13 @@ body {
   align-items: center;
 }
 
+.stat-item.offline-notice {
+  color: #ffb300;
+  font-style: italic;
+  flex-grow: 1;
+  text-align: center;
+}
+
 .live-dot {
   width: 10px;
   height: 10px;
@@ -163,6 +170,18 @@ body {
   background: var(--success-color);
   box-shadow: 0 0 8px var(--success-color), inset 0 0 4px rgba(102, 255, 0, 0.6);
   animation: pulse-live 1.5s ease-in-out infinite;
+}
+
+.live-dot.degraded {
+  background: #ffb300;
+  box-shadow: 0 0 8px #ffb300, inset 0 0 4px rgba(255, 179, 0, 0.6);
+  animation: pulse-degraded 2s ease-in-out infinite;  /* Slower pulse for degraded */
+}
+
+.live-dot.offline {
+  background: #ff0000;
+  box-shadow: 0 0 8px #ff0000, inset 0 0 4px rgba(255, 0, 0, 0.6);
+  animation: none;  /* No blinking when offline */
 }
 
 @keyframes pulse-live {
@@ -176,12 +195,31 @@ body {
   }
 }
 
+@keyframes pulse-degraded {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px #ffb300, inset 0 0 4px rgba(255, 179, 0, 0.6);
+  }
+  50% {
+    opacity: 0.4;
+    box-shadow: 0 0 12px #ffb300, inset 0 0 6px rgba(255, 179, 0, 0.8);
+  }
+}
+
 .live-text {
   font-size: 11px;
   color: var(--success-color);
   letter-spacing: 2px;
   font-weight: bold;
   text-transform: uppercase;
+}
+
+.live-text.degraded {
+  color: #ffb300;
+}
+
+.live-text.offline {
+  color: #ff0000;
 }
 
 .faction-stat {

@@ -36,6 +36,8 @@ function App() {
   const [warStatus, setWarStatus] = useState<WarStatus | null>(null)
   const [dailyQuote, setDailyQuote] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'chat' | 'galactic' | 'news' | 'major' | 'help'>('chat')
+  const [isApiAvailable, setIsApiAvailable] = useState(true)  // Track API availability
+  const [upstreamApiDegraded, setUpstreamApiDegraded] = useState(false)  // Track upstream API status
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,10 +48,40 @@ function App() {
     // Load initial war status and statistics
     const loadData = async () => {
       try {
-        const status = await HighCommandAPI.getWarStatus()
-        setWarStatus(status)
+        // First check health status for upstream API health
+        const healthStatus = await HighCommandAPI.getStatus()
+        console.log('Health status loaded:', healthStatus)
+        
+        if (healthStatus !== null && healthStatus !== undefined) {
+          // Base API is available and responding
+          setIsApiAvailable(true)
+          console.log('API Available: true')
+          
+          // Check upstream API status
+          // Expected: upstream_api is 'online' or 'offline'
+          const upstreamStatus = healthStatus.upstream_api
+          console.log('Upstream API status:', upstreamStatus)
+          
+          // Set degraded if upstream is not 'online'
+          setUpstreamApiDegraded(upstreamStatus !== 'online')
+          console.log('Upstream degraded:', upstreamStatus !== 'online')
+        } else {
+          // Health check failed - base API is not responding
+          console.log('API Available: false (health check failed)')
+          setIsApiAvailable(false)
+          setUpstreamApiDegraded(false)
+        }
+        
+        // Then fetch war status for stats
+        const warStatus = await HighCommandAPI.getWarStatus()
+        if (warStatus) {
+          console.log('War status loaded:', warStatus)
+          setWarStatus(warStatus)
+        }
       } catch (error) {
         console.error('Failed to load data:', error)
+        setIsApiAvailable(false)
+        setUpstreamApiDegraded(false)
       }
     }
     loadData()
@@ -62,6 +94,15 @@ function App() {
     const interval = setInterval(loadData, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // Debug: Log API status changes
+  useEffect(() => {
+    console.log('📊 LIVE Indicator Status:', {
+      isApiAvailable,
+      upstreamApiDegraded,
+      display: !isApiAvailable ? 'OFFLINE' : upstreamApiDegraded ? 'DEGRADED' : 'LIVE'
+    })
+  }, [isApiAvailable, upstreamApiDegraded])
 
   const handleSendMessage = async (prompt: string) => {
     const userMessage: Message = {
@@ -114,7 +155,7 @@ function App() {
           </div>
         </div>
         <div className="live-stats">
-          {warStatus && (
+          {warStatus ? (
             <>
               <div className="stat-item">
                 <span className="stat-label">MISSIONS WON</span>
@@ -151,12 +192,20 @@ function App() {
                 <span className="stat-label">IMPACT</span>
                 <span className="stat-value">{(warStatus.impactMultiplier * 100).toFixed(2)}%</span>
               </div>
-              <div className="stat-item live-indicator">
-                <span className="live-dot"></span>
-                <span className="live-text">LIVE</span>
-              </div>
             </>
+          ) : (
+            <div className="stat-item offline-notice">
+              <span className="stat-label">AWAITING DATA...</span>
+            </div>
           )}
+          
+          {/* Always show LIVE indicator regardless of API status */}
+          <div className="stat-item live-indicator">
+            <span className={`live-dot ${!isApiAvailable ? 'offline' : upstreamApiDegraded ? 'degraded' : 'live'}`}></span>
+            <span className={`live-text ${!isApiAvailable ? 'offline' : upstreamApiDegraded ? 'degraded' : ''}`}>
+              {!isApiAvailable ? 'OFFLINE' : upstreamApiDegraded ? 'DEGRADED' : 'LIVE'}
+            </span>
+          </div>
         </div>
         
         {/* Democracy Officer Reminder */}
