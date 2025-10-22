@@ -42,6 +42,17 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   void _setSelectedSector
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
+  
+  // Generate stars once on component mount
+  const [stars] = useState(() => {
+    return [...Array(100)].map(() => ({
+      x: Math.random() * 1000,
+      y: Math.random() * 1000,
+      size: Math.random() * 1.5,
+      opacity: Math.random() * 0.6 + 0.4
+    }))
+  })
+  
   // viewBox state for SVG zoom/pan: x, y, width, height
   // With planets spread across ±2000 from center (2000, 2000):
   // - All planets fit in range roughly -2100 to 4100 for both X and Y
@@ -111,7 +122,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   // Rotate the star field slowly
   useEffect(() => {
     const interval = setInterval(() => {
-      setRotation(prev => (prev + 0.0025) % 360)
+      setRotation(prev => (prev + 0.01) % 360)
     }, 50)
     return () => clearInterval(interval)
   }, [])
@@ -461,21 +472,16 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             transform: `rotate(${rotation}deg)`
           }}
         >
-          {[...Array(100)].map((_, i) => {
-            const x = Math.random() * 1000
-            const y = Math.random() * 1000
-            const size = Math.random() * 1.5
-            return (
-              <circle
-                key={`star-${i}`}
-                cx={x}
-                cy={y}
-                r={size}
-                fill="#66ff00"
-                opacity={Math.random() * 0.6 + 0.4}
-              />
-            )
-          })}
+          {stars.map((star, i) => (
+            <circle
+              key={`star-${i}`}
+              cx={star.x}
+              cy={star.y}
+              r={star.size}
+              fill="#66ff00"
+              opacity={star.opacity}
+            />
+          ))}
         </svg>
 
         {/* SVG orbital paths */}
