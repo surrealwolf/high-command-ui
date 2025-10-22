@@ -132,6 +132,12 @@
   color: #e0e0e0;
   line-height: 1.5;
   margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.news-text span {
+  display: inline;
 }
 
 .news-timestamp {

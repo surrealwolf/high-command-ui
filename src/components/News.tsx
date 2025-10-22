@@ -23,12 +23,142 @@ const parseTimestamp = (obj: any): Date => {
   return new Date()
 }
 
+// Helper function to parse custom HTML tags in dispatch messages
+const parseDispatchMessage = (message: string): JSX.Element => {
+  // Custom tags: <i=0>...</i> = gray, <i=1>...</i> = yellow/emphasis, <i=3>...</i> = cyan/critical
+  const tagMap: { [key: string]: string } = {
+    '0': '#999999',      // Gray
+    '1': '#ffff00',      // Yellow
+    '3': '#00ffff'       // Cyan
+  }
+
+  // Replace tags with a marker and track colors
+  let colorStack: string[] = ['inherit']
+  let result: (string | JSX.Element)[] = []
+  let currentText = ''
+  let key = 0
+
+  // Process message character by character, handling tags
+  const regex = /<i=(\d+)>|<\/i>/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(message)) !== null) {
+    // Add text before this tag
+    const textBefore = message.substring(lastIndex, match.index)
+    if (textBefore) {
+      currentText += textBefore
+    }
+
+    // Handle tag
+    if (match[0] === '</i>') {
+      // Closing tag - render accumulated text with current color, then pop color
+      if (currentText) {
+        const color = colorStack[colorStack.length - 1]
+        const lines = currentText.split('\n')
+        result.push(
+          <span key={key++} style={{ color }}>
+            {lines.map((line, idx) => (
+              <span key={idx}>
+                {line}
+                {idx < lines.length - 1 && <br />}
+              </span>
+            ))}
+          </span>
+        )
+        currentText = ''
+      }
+      colorStack.pop()
+    } else {
+      // Opening tag - render any accumulated text first, then push new color
+      if (currentText) {
+        const color = colorStack[colorStack.length - 1]
+        const lines = currentText.split('\n')
+        result.push(
+          <span key={key++} style={{ color }}>
+            {lines.map((line, idx) => (
+              <span key={idx}>
+                {line}
+                {idx < lines.length - 1 && <br />}
+              </span>
+            ))}
+          </span>
+        )
+        currentText = ''
+      }
+      const tagNum = match[1]
+      colorStack.push(tagMap[tagNum] || 'inherit')
+    }
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Handle remaining text
+  if (lastIndex < message.length) {
+    currentText += message.substring(lastIndex)
+  }
+  if (currentText) {
+    const color = colorStack[colorStack.length - 1]
+    const lines = currentText.split('\n')
+    result.push(
+      <span key={key++} style={{ color }}>
+        {lines.map((line, idx) => (
+          <span key={idx}>
+            {line}
+            {idx < lines.length - 1 && <br />}
+          </span>
+        ))}
+      </span>
+    )
+  }
+
+  return <>{result}</>
+}
+
+// Helper function to extract title from dispatch message (first <i=3>...</i> tag, or first line)
+const extractTitleFromMessage = (message: string): string => {
+  // First try to find <i=3>...</i> tag
+  const match = message.match(/<i=3>(.*?)<\/i>/)
+  if (match && match[1]) {
+    return match[1]
+  }
+  
+  // Otherwise, try to extract first sentence or first line before newlines
+  const lines = message.split('\n')
+  if (lines[0]) {
+    // Strip any tags from the first line
+    const stripped = lines[0].replace(/<\/?i=\d+>/g, '')
+    if (stripped.length > 0) {
+      return stripped
+    }
+  }
+  
+  return message.substring(0, 50)
+}
+
+// Helper function to remove first tagged line or <i=3>...</i> tag and leading whitespace from content
+const stripTitleFromMessage = (message: string): string => {
+  // First try to remove <i=3>...</i> tag
+  let result = message.replace(/<i=3>.*?<\/i>\s*/, '')
+  
+  // If that didn't remove anything, try to remove first line
+  if (result === message) {
+    const lines = message.split('\n')
+    if (lines.length > 1) {
+      result = lines.slice(1).join('\n')
+    }
+  }
+  
+  return result
+}
+
 // Helper function to map dispatch to NewsItem
 const mapDispatchToNewsItem = (dispatch: any, idx: number): NewsItem => {
+  const message = dispatch.message || dispatch.content || 'No content available'
   return {
     id: dispatch.id || `${idx}`,
-    title: dispatch.title || dispatch.message?.substring(0, 50) || 'Dispatch',
-    content: dispatch.message || dispatch.content || 'No content available',
+    title: extractTitleFromMessage(message),
+    content: stripTitleFromMessage(message),
     timestamp: parseTimestamp(dispatch),
     priority: dispatch.priority || 'normal'
   }
@@ -161,7 +291,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
                 </div>
                 <div className="news-content">
                   <h3 className="news-title">{item.title}</h3>
-                  <p className="news-text">{item.content}</p>
+                  <div className="news-text">{parseDispatchMessage(item.content)}</div>
                   <span className="news-timestamp">
                     {item.timestamp.toLocaleString()}
                   </span>
