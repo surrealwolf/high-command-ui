@@ -485,8 +485,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           <circle cx="400" cy="400" r="280" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="1" strokeDasharray="4,4" />
           <circle cx="400" cy="400" r="750" fill="none" stroke="rgba(255, 179, 0, 0.1)" strokeWidth="1.5" />
 
-          {/* Sector connecting lines - draw lines between planets in same sector */}
-          {planets && planets.length > 1 && (
+          {/* Sector connecting lines - draw lines between planets in same sector - HIDDEN */}
+          {false && planets && planets.length > 1 && (
             <g opacity="0.15">
               {Object.entries(sectorMap).map(([sector, sectorPlanets]: [string, any]) => 
                 sectorPlanets.length > 1 ? (
@@ -512,16 +512,18 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             </g>
           )}
 
-          {/* Debug: Coordinate crosshairs at Super Earth center */}
+          {/* Debug: Coordinate crosshairs at Super Earth center - HIDDEN */}
+          {false && (
           <g opacity="0.3" stroke="rgba(255, 179, 0, 0.5)" strokeWidth="1">
             <line x1="350" y1="400" x2="450" y2="400" />
             <line x1="400" y1="350" x2="400" y2="450" />
             <circle cx="400" cy="400" r="2" fill="rgba(255, 179, 0, 1)" />
             <text x="410" y="395" fill="rgba(255, 179, 0, 0.7)" fontSize="10">(400, 400)</text>
           </g>
+          )}
 
-          {/* Connection lines to Super Earth from far planets */}
-          {planets && (
+          {/* Connection lines to Super Earth from far planets - HIDDEN */}
+          {false && planets && (
             <g opacity="0.1">
               {planets.map((planet: Planet, idx: number) => {
                 const pos = getPlanetPosition(planet, idx, planets.length)
