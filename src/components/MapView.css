@@ -185,11 +185,11 @@
 
 @keyframes emoji-pulse {
   0%, 100% {
-    font-size: 20;
+    font-size: 20pt;
     opacity: 1;
   }
   50% {
-    font-size: 24;
+    font-size: 24pt;
     opacity: 0.8;
   }
 }

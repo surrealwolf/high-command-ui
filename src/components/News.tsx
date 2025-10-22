@@ -14,6 +14,26 @@ interface NewsProps {
   warStatus: any
 }
 
+// Helper function to parse timestamps from various field names
+const parseTimestamp = (obj: any): Date => {
+  if (obj?.published) return new Date(obj.published)
+  if (obj?.timestamp) return new Date(obj.timestamp)
+  if (obj?.created_at) return new Date(obj.created_at)
+  if (obj?.date) return new Date(obj.date)
+  return new Date()
+}
+
+// Helper function to map dispatch to NewsItem
+const mapDispatchToNewsItem = (dispatch: any, idx: number): NewsItem => {
+  return {
+    id: dispatch.id || `${idx}`,
+    title: dispatch.title || `DISPATCH ${idx + 1}`,
+    content: dispatch.message || dispatch.content || 'No content available',
+    timestamp: parseTimestamp(dispatch),
+    priority: dispatch.priority || 'normal'
+  }
+}
+
 const News: React.FC<NewsProps> = ({ warStatus }) => {
   const [news, setNews] = useState<NewsItem[]>([])
 
@@ -28,52 +48,16 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
         if (dispatchesData) {
           if (Array.isArray(dispatchesData)) {
             // If API returns array of dispatches
-            const apiNews: NewsItem[] = dispatchesData.map((dispatch: any, idx: number) => {
-              // Parse timestamp - dispatches API uses 'published' field
-              let timestamp = new Date()
-              if (dispatch.published) {
-                timestamp = new Date(dispatch.published)
-              } else if (dispatch.timestamp) {
-                timestamp = new Date(dispatch.timestamp)
-              } else if (dispatch.created_at) {
-                timestamp = new Date(dispatch.created_at)
-              } else if (dispatch.date) {
-                timestamp = new Date(dispatch.date)
-              }
-              
-              return {
-                id: dispatch.id || `${idx}`,
-                title: dispatch.title || `DISPATCH ${idx + 1}`,
-                content: dispatch.message || dispatch.content || 'No content available',
-                timestamp: timestamp,
-                priority: dispatch.priority || 'normal'
-              }
-            })
+            const apiNews: NewsItem[] = dispatchesData.map((dispatch: any, idx: number) =>
+              mapDispatchToNewsItem(dispatch, idx)
+            )
             setNews(apiNews)
             return
           } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
             // If API returns object with dispatches array
-            const apiNews: NewsItem[] = dispatchesData.dispatches.map((dispatch: any, idx: number) => {
-              // Parse timestamp - try multiple formats
-              let timestamp = new Date()
-              if (dispatch.published) {
-                timestamp = new Date(dispatch.published)
-              } else if (dispatch.timestamp) {
-                timestamp = new Date(dispatch.timestamp)
-              } else if (dispatch.created_at) {
-                timestamp = new Date(dispatch.created_at)
-              } else if (dispatch.date) {
-                timestamp = new Date(dispatch.date)
-              }
-              
-              return {
-                id: dispatch.id || `${idx}`,
-                title: dispatch.title || `DISPATCH ${idx + 1}`,
-                content: dispatch.message || dispatch.content || 'No content available',
-                timestamp: timestamp,
-                priority: dispatch.priority || 'normal'
-              }
-            })
+            const apiNews: NewsItem[] = dispatchesData.dispatches.map((dispatch: any, idx: number) =>
+              mapDispatchToNewsItem(dispatch, idx)
+            )
             setNews(apiNews)
             return
           }

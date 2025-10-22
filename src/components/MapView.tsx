@@ -2,6 +2,19 @@ import { useState, useEffect, useRef } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
 
+interface Event {
+  id?: string
+  eventType?: number
+  faction?: string
+  health?: number
+  maxHealth?: number
+  startTime?: string
+  endTime?: string
+  campaignId?: string
+  jointOperationIds?: string[]
+  [key: string]: any
+}
+
 interface Planet {
   name: string
   index: number
@@ -11,7 +24,7 @@ interface Planet {
   currentOwner?: string
   owner?: string
   biomeType?: string
-  event?: any
+  event?: Event
   [key: string]: any
 }
 
@@ -23,8 +36,10 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   
   const [planets, setPlanets] = useState<Planet[]>([])  // Start empty, show loading animation
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedSector, setSelectedSector] = useState<string | null>(null)
+  const [_selectedSector, _setSelectedSector] = useState<string | null>(null)
+  // TODO: _selectedSector and _setSelectedSector will be used for sector-based features
+  void _selectedSector
+  void _setSelectedSector
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
   // viewBox state for SVG zoom/pan: x, y, width, height
@@ -148,7 +163,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     return labels[status] || 'UNKNOWN'
   }
 
-  const getEventColor = (event: any) => {
+  const getEventColor = (event: Event | null | undefined) => {
     if (!event) return null
     // Map event faction to blink color
     if (event.faction === 'Terminids') return '#ffff00'  // Yellow for Terminids
@@ -159,7 +174,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     return '#ff00ff'  // Magenta for unknown
   }
 
-  const getFactionEmoji = (event: any) => {
+  const getFactionEmoji = (event: Event | null | undefined) => {
     if (!event) return null
     // Map event faction to emoji
     if (event.faction === 'Terminids') return '🐛'  // Bug for Terminids
@@ -168,7 +183,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     return '⚠️'  // Warning for unknown
   }
 
-  const getEventTypeEmoji = (event: any) => {
+  const getEventTypeEmoji = (event: Event | null | undefined) => {
     if (!event) return null
     // Map event type to emoji
     if (event.eventType === 1) return '⚔️'  // Swords for ATTACK
@@ -259,12 +274,9 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     return layout
   }
 
-  const sectorLayout = getSectorLayout()
-  // Note: sectorLayout will be used in sector grid rendering and zoom-to-sector handlers
-  // Ensure variables are recognized as used by TypeScript
-  void selectedSector
-  void setSelectedSector
-  void sectorLayout
+  const _sectorLayout = getSectorLayout()
+  // TODO: These will be used for sector grid rendering and zoom-to-sector features
+  void _sectorLayout
 
   // Smoothly animate viewBox from current to target over duration (ms)
   const animateViewBox = (target: { x: number; y: number; w: number; h: number }, duration = 300) => {
