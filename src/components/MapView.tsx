@@ -111,7 +111,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   // Rotate the star field slowly
   useEffect(() => {
     const interval = setInterval(() => {
-      setRotation(prev => (prev + 0.05) % 360)
+      setRotation(prev => (prev + 0.005) % 360)
     }, 50)
     return () => clearInterval(interval)
   }, [])

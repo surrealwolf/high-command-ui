@@ -158,10 +158,6 @@ function App() {
           {warStatus ? (
             <>
               <div className="stat-item">
-                <span className="stat-label">MISSIONS WON</span>
-                <span className="stat-value">{warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'}</span>
-              </div>
-              <div className="stat-item">
                 <span className="stat-label">ACTIVE PLAYERS</span>
                 <span className="stat-value">{warStatus.statistics?.playerCount?.toLocaleString() || 'N/A'}</span>
               </div>
@@ -172,6 +168,14 @@ function App() {
               <div className="stat-item">
                 <span className="stat-label">AUTOMATON KILLS</span>
                 <span className="stat-value">{(warStatus.statistics?.automatonKills ? Math.floor(warStatus.statistics.automatonKills / 1e9) : 0)}B</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">ILLUMINATE KILLS</span>
+                <span className="stat-value">{(warStatus.statistics?.illuminateKills ? Math.floor(warStatus.statistics.illuminateKills / 1e9) : 0)}B</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">MISSIONS WON</span>
+                <span className="stat-value">{warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">ILLUMINATE KILLS</span>
