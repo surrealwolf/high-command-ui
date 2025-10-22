@@ -118,16 +118,15 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     return '⏳' // hourglass - waiting to start
   }
 
+  const getOrderStatusEmojiWithFailed = (progress: number[] | undefined, expiration: string | undefined) => {
+    const isFailed = getOrderFailed(progress, expiration)
+    if (isFailed) return '❌' // failed
+    return getOrderStatusEmoji(progress)
+  }
+
   const getOrderSuccessStatus = (progress: number[] | undefined) => {
     if (!progress) return false
     return progress.every((p) => p === 1)
-  }
-
-  const formatObjectivesList = (progress: number[] | undefined) => {
-    if (!progress || progress.length === 0) return 'No objectives'
-    return progress
-      .map((p, idx) => `${idx + 1}. ${p === 1 ? '✅ Completed' : '⏳ In Progress'}`)
-      .join(' • ')
   }
 
   const getTimeRemaining = (expiration: string | undefined) => {
@@ -163,6 +162,35 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     return 'time-normal'
   }
 
+  const getOrderFailed = (progress: number[] | undefined, expiration: string | undefined) => {
+    if (!progress) return false
+    // Failed if expired AND not all objectives completed
+    const allCompleted = progress.every((p) => p === 1)
+    if (allCompleted) return false // Not failed if completed
+    
+    const timeInfo = getTimeRemaining(expiration)
+    return timeInfo.status === 'expired' // Failed if expired and not complete
+  }
+
+  const formatObjectivesDetailed = (progress: number[] | undefined) => {
+    if (!progress || progress.length === 0) return []
+    return progress.map((p, idx) => ({
+      number: idx + 1,
+      status: p === 1 ? 'Completed' : 'In Progress',
+      emoji: p === 1 ? '✅' : '⏳'
+    }))
+  }
+
+  const getPriorityBadge = (priority: string | undefined) => {
+    if (!priority) return null
+    const badges: { [key: string]: { emoji: string; label: string } } = {
+      critical: { emoji: '🔴', label: 'CRITICAL' },
+      high: { emoji: '🟠', label: 'HIGH' },
+      normal: { emoji: '🟡', label: 'NORMAL' }
+    }
+    return badges[priority] || null
+  }
+
   return (
     <div className="mission-orders-container">
       <div className="mission-header">
@@ -180,7 +208,9 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                   key={mission.id}
                   className={`mission-card status-${mission.status} priority-${mission.priority} ${
                     expandedId === mission.id ? 'expanded' : ''
-                  } ${getMissionCardClass(mission.expiration)}`}
+                  } ${getMissionCardClass(mission.expiration)} ${
+                    getOrderFailed(mission.progress, mission.expiration) ? 'status-failed' : ''
+                  }`}
                   onClick={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
                   role="button"
                   tabIndex={0}
@@ -188,14 +218,27 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                   <div className="mission-header-row">
                     <span
                       className="mission-status-emoji"
-                      title={getOrderSuccessStatus(mission.progress) ? 'All objectives completed' : 'Objectives in progress'}
+                      title={
+                        getOrderFailed(mission.progress, mission.expiration)
+                          ? 'Order Failed'
+                          : getOrderSuccessStatus(mission.progress)
+                          ? 'All objectives completed'
+                          : 'Objectives in progress'
+                      }
                     >
-                      {getOrderStatusEmoji(mission.progress)}
+                      {getOrderStatusEmojiWithFailed(mission.progress, mission.expiration)}
                     </span>
                     <h4 className="mission-title">{mission.title}</h4>
-                    <span className="mission-time-counter">
-                      {getTimeRemaining(mission.expiration).formatted}
-                    </span>
+                    <div className="mission-right-section">
+                      <span className="mission-time-counter">
+                        {getTimeRemaining(mission.expiration).formatted}
+                      </span>
+                      {getPriorityBadge(mission.priority) && (
+                        <span className={`priority-badge priority-${mission.priority}`}>
+                          {getPriorityBadge(mission.priority)?.emoji} {getPriorityBadge(mission.priority)?.label}
+                        </span>
+                      )}
+                    </div>
                     <span className="mission-expand-icon">{expandedId === mission.id ? '▼' : '▶'}</span>
                   </div>
                   <p className="mission-objective">{mission.objective}</p>
@@ -207,14 +250,24 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                           <strong>🎁 Reward:</strong> {getRewardText(mission.reward)}
                         </div>
                       )}
-                      {mission.progress && (
-                        <div className="detail-item">
-                          <strong>📋 Objectives:</strong> {formatObjectivesList(mission.progress)}
+                      {mission.progress && mission.progress.length > 0 && (
+                        <div className="detail-item objectives-list">
+                          <strong>📋 Objectives ({mission.progress.length}):</strong>
+                          <div className="objectives-items">
+                            {formatObjectivesDetailed(mission.progress).map((obj) => (
+                              <div key={obj.number} className="objective-item">
+                                {obj.number}. {obj.emoji} {obj.status}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {mission.expiration && (
                         <div className="detail-item">
                           <strong>⏰ Expires:</strong> {formatExpiration(mission.expiration)}
+                          {getOrderFailed(mission.progress, mission.expiration) && (
+                            <span className="failed-badge"> ❌ FAILED</span>
+                          )}
                         </div>
                       )}
                     </div>
