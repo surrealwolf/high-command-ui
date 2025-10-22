@@ -27,7 +27,7 @@ const parseTimestamp = (obj: any): Date => {
 const mapDispatchToNewsItem = (dispatch: any, idx: number): NewsItem => {
   return {
     id: dispatch.id || `${idx}`,
-    title: dispatch.title || `DISPATCH ${idx + 1}`,
+    title: dispatch.title || dispatch.message?.substring(0, 50) || 'Dispatch',
     content: dispatch.message || dispatch.content || 'No content available',
     timestamp: parseTimestamp(dispatch),
     priority: dispatch.priority || 'normal'
@@ -46,19 +46,36 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
         // Try to fetch from dispatches endpoint
         const dispatchesData = await HighCommandAPI.getDispatches()
         if (dispatchesData) {
+          let dispatches: any[] = []
+          
           if (Array.isArray(dispatchesData)) {
-            // If API returns array of dispatches
-            const apiNews: NewsItem[] = dispatchesData.map((dispatch: any, idx: number) =>
+            dispatches = dispatchesData
+          } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
+            dispatches = dispatchesData.dispatches
+          }
+          
+          if (dispatches.length > 0) {
+            // Sort by date (newest first) and get latest 10
+            const sorted = dispatches.sort((a: any, b: any) => {
+              const dateA = new Date(parseTimestamp(a)).getTime()
+              const dateB = new Date(parseTimestamp(b)).getTime()
+              return dateB - dateA
+            }).slice(0, 10)
+            
+            const apiNews: NewsItem[] = sorted.map((dispatch: any, idx: number) =>
               mapDispatchToNewsItem(dispatch, idx)
             )
             setNews(apiNews)
             return
-          } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
-            // If API returns object with dispatches array
-            const apiNews: NewsItem[] = dispatchesData.dispatches.map((dispatch: any, idx: number) =>
-              mapDispatchToNewsItem(dispatch, idx)
-            )
-            setNews(apiNews)
+          } else {
+            // No dispatches available
+            setNews([{
+              id: 'no-dispatches',
+              title: '📡 COMMAND STATUS',
+              content: 'No dispatches at this time.',
+              timestamp: new Date(),
+              priority: 'normal'
+            }])
             return
           }
         }
@@ -130,7 +147,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
       <div className="news-feed">
         {news.length === 0 ? (
           <div className="no-news">
-            <p>Loading tactical briefings...</p>
+            <p>No dispatches at this time.</p>
           </div>
         ) : (
           news

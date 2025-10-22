@@ -17,7 +17,6 @@ interface MissionOrdersProps {
 
 const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   const [missions, setMissions] = useState<Mission[]>([])
-  const [planets, setPlanets] = useState<any[]>([])
 
   useEffect(() => {
     const loadMissions = async () => {
@@ -38,12 +37,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
             setMissions(apiMissions)
           }
         }
-        
-        // Fetch planets for deployment zones
-        const planetsData = await HighCommandAPI.getPlanets()
-        if (planetsData && Array.isArray(planetsData)) {
-          setPlanets(planetsData.slice(0, 5))
-        }
       } catch (error) {
         console.error('Failed to load major orders:', error)
         // Fallback: use default missions if API fails
@@ -63,14 +56,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
             difficulty: 'Extreme',
             priority: 'critical',
             status: 'active'
-          },
-          {
-            id: '3',
-            title: 'RECON MISSION: SECTOR 7',
-            objective: 'Scout enemy positions and gather intelligence. Avoid unnecessary engagement.',
-            difficulty: 'Medium',
-            priority: 'high',
-            status: 'available'
           }
         ]
         setMissions(defaultMissions)
@@ -112,12 +97,11 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     <div className="mission-orders-container">
       <div className="mission-header">
         <h2>⭐ MAJOR ORDERS</h2>
-        <p className="mission-subheader">GALACTIC WAR CAMPAIGN DIRECTIVES</p>
+        <p className="mission-subheader">ACTIVE ASSIGNMENTS</p>
       </div>
 
       <div className="mission-sections">
         <div className="mission-briefing">
-          <h3>ACTIVE OPERATIONS</h3>
           <div className="missions-list">
             {missions
               .filter((m) => m.status === 'active')
@@ -133,42 +117,13 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                   <p className="mission-objective">{mission.objective}</p>
                 </div>
               ))}
+            {missions.filter((m) => m.status === 'active').length === 0 && (
+              <div className="no-missions">
+                <p>No active assignments at this time.</p>
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="mission-briefing">
-          <h3>AVAILABLE MISSIONS</h3>
-          <div className="missions-list">
-            {missions
-              .filter((m) => m.status === 'available')
-              .map((mission) => (
-                <div key={mission.id} className={`mission-card status-${mission.status} priority-${mission.priority}`}>
-                  <div className="mission-header-row">
-                    <span className="mission-status-icon">{getStatusIcon(mission.status)}</span>
-                    <h4 className="mission-title">{mission.title}</h4>
-                    <span className="mission-difficulty" style={{ color: getDifficultyColor(mission.difficulty) }}>
-                      {mission.difficulty.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="mission-objective">{mission.objective}</p>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        {planets.length > 0 && (
-          <div className="mission-briefing">
-            <h3>DEPLOYMENT ZONES</h3>
-            <div className="planets-grid">
-              {planets.map((planet, idx) => (
-                <div key={idx} className="planet-card">
-                  <div className="planet-name">{planet.name || `SECTOR ${idx + 1}`}</div>
-                  <div className="planet-biome">{planet.biome_name || 'CLASSIFIED'}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
