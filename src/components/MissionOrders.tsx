@@ -87,34 +87,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     loadMissions()
   }, [warStatus])
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy':
-        return '#66ff00'
-      case 'Medium':
-        return '#ffff00'
-      case 'Hard':
-        return '#ff8800'
-      case 'Extreme':
-        return '#ff0000'
-      default:
-        return '#ffb300'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return '🔴'
-      case 'available':
-        return '⚪'
-      case 'completed':
-        return '✅'
-      default:
-        return '❓'
-    }
-  }
-
   const formatExpiration = (expiration: string | undefined) => {
     if (!expiration) return 'No expiration'
     try {
@@ -130,6 +102,65 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     // Type 1 is typically Super Credits or Medals
     const typeLabel = reward.type === 1 ? '⭐ Medals' : `Type ${reward.type}`
     return `${typeLabel}: ${reward.amount}`
+  }
+
+  const getOrderStatusEmoji = (progress: number[] | undefined) => {
+    if (!progress || progress.length === 0) return '⏳' // hourglass - no data
+
+    // Check if all objectives completed (progress values are 1)
+    const allCompleted = progress.every((p) => p === 1)
+    if (allCompleted) return '✅' // checkmark - all completed
+
+    // Check if any are in progress (have both 0 and 1)
+    const hasInProgress = progress.some((p) => p === 0)
+    if (hasInProgress) return '⚙️' // gear - in progress
+
+    return '⏳' // hourglass - waiting to start
+  }
+
+  const getOrderSuccessStatus = (progress: number[] | undefined) => {
+    if (!progress) return false
+    return progress.every((p) => p === 1)
+  }
+
+  const formatObjectivesList = (progress: number[] | undefined) => {
+    if (!progress || progress.length === 0) return 'No objectives'
+    return progress
+      .map((p, idx) => `${idx + 1}. ${p === 1 ? '✅ Completed' : '⏳ In Progress'}`)
+      .join(' • ')
+  }
+
+  const getTimeRemaining = (expiration: string | undefined) => {
+    if (!expiration) return { hours: 0, formatted: 'No deadline', status: 'normal' }
+    try {
+      const expiryTime = new Date(expiration).getTime()
+      const now = Date.now()
+      const ms = expiryTime - now
+
+      if (ms <= 0) {
+        return { hours: 0, formatted: 'EXPIRED', status: 'expired' }
+      }
+
+      const hours = Math.floor(ms / (1000 * 60 * 60))
+      const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+
+      let formatted = ''
+      if (hours > 0) formatted += `${hours}h`
+      if (mins > 0) formatted += ` ${mins}m`
+
+      const status = hours < 24 ? (hours < 1 ? 'expired' : 'urgent') : 'normal'
+
+      return { hours, formatted, status }
+    } catch {
+      return { hours: 0, formatted: 'Unknown', status: 'normal' }
+    }
+  }
+
+  const getMissionCardClass = (expiration: string | undefined) => {
+    const timeInfo = getTimeRemaining(expiration)
+    if (timeInfo.status === 'expired') return 'time-expired'
+    if (timeInfo.status === 'urgent') return 'time-urgent'
+    return 'time-normal'
   }
 
   return (
@@ -149,16 +180,21 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                   key={mission.id}
                   className={`mission-card status-${mission.status} priority-${mission.priority} ${
                     expandedId === mission.id ? 'expanded' : ''
-                  }`}
+                  } ${getMissionCardClass(mission.expiration)}`}
                   onClick={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
                   role="button"
                   tabIndex={0}
                 >
                   <div className="mission-header-row">
-                    <span className="mission-status-icon">{getStatusIcon(mission.status)}</span>
+                    <span
+                      className="mission-status-emoji"
+                      title={getOrderSuccessStatus(mission.progress) ? 'All objectives completed' : 'Objectives in progress'}
+                    >
+                      {getOrderStatusEmoji(mission.progress)}
+                    </span>
                     <h4 className="mission-title">{mission.title}</h4>
-                    <span className="mission-difficulty" style={{ color: getDifficultyColor(mission.difficulty) }}>
-                      {mission.difficulty.toUpperCase()}
+                    <span className="mission-time-counter">
+                      {getTimeRemaining(mission.expiration).formatted}
                     </span>
                     <span className="mission-expand-icon">{expandedId === mission.id ? '▼' : '▶'}</span>
                   </div>
@@ -168,23 +204,17 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                     <div className="mission-details">
                       {mission.reward && (
                         <div className="detail-item">
-                          <strong>Reward:</strong> {getRewardText(mission.reward)}
-                        </div>
-                      )}
-                      {mission.expiration && (
-                        <div className="detail-item">
-                          <strong>Expires:</strong> {formatExpiration(mission.expiration)}
+                          <strong>🎁 Reward:</strong> {getRewardText(mission.reward)}
                         </div>
                       )}
                       {mission.progress && (
                         <div className="detail-item">
-                          <strong>Progress:</strong> {mission.progress.map((p, i) => `${i + 1}: ${p}`).join(' • ')}
+                          <strong>📋 Objectives:</strong> {formatObjectivesList(mission.progress)}
                         </div>
                       )}
-                      {mission.tasks && mission.tasks.length > 0 && (
+                      {mission.expiration && (
                         <div className="detail-item">
-                          <strong>Tasks:</strong> {mission.tasks.length} task
-                          {mission.tasks.length !== 1 ? 's' : ''}
+                          <strong>⏰ Expires:</strong> {formatExpiration(mission.expiration)}
                         </div>
                       )}
                     </div>

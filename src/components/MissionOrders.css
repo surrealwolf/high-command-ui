@@ -136,6 +136,44 @@
   background: linear-gradient(135deg, rgba(40, 40, 0, 0.3) 0%, rgba(20, 20, 0, 0.2) 100%);
 }
 
+/* Time-based box coloring */
+.mission-card.time-normal {
+  background: linear-gradient(135deg, rgba(20, 40, 20, 0.4) 0%, rgba(10, 20, 10, 0.3) 100%);
+  border-left: 4px solid #66ff00;
+}
+
+.mission-card.time-urgent {
+  background: linear-gradient(135deg, rgba(40, 40, 20, 0.5) 0%, rgba(20, 20, 10, 0.4) 100%);
+  border-left: 4px solid #ffff00;
+  animation: urgentPulse 1s ease-in-out infinite;
+}
+
+.mission-card.time-expired {
+  background: linear-gradient(135deg, rgba(40, 20, 20, 0.5) 0%, rgba(20, 10, 10, 0.4) 100%);
+  border-left: 4px solid #ff0000;
+  animation: expiredPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.3), inset 0 0 10px rgba(255, 255, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 255, 0, 0.5), inset 0 0 15px rgba(255, 255, 0, 0.2);
+  }
+}
+
+@keyframes expiredPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3), inset 0 0 10px rgba(255, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.5), inset 0 0 15px rgba(255, 0, 0, 0.2);
+  }
+}
+
 @keyframes missionPulse {
   0%,
   100% {
@@ -297,6 +335,24 @@
 .mission-card {
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.mission-status-emoji {
+  font-size: 18px;
+  min-width: 24px;
+  text-align: center;
+  cursor: help;
+}
+
+.mission-time-counter {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  text-align: center;
+  min-width: 60px;
+  color: #ffb300;
 }
 
 .mission-expand-icon {
