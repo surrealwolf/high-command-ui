@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import HighCommandAPI from '../services/api'
 import './News.css'
 
 interface NewsItem {
@@ -17,21 +18,82 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
   const [news, setNews] = useState<NewsItem[]>([])
 
   useEffect(() => {
-    // Generate news from war status data
-    const generateNews = async () => {
+    // Fetch dispatches from API
+    const loadDispatches = async () => {
       const newsItems: NewsItem[] = []
 
+      try {
+        // Try to fetch from dispatches endpoint
+        const dispatchesData = await HighCommandAPI.getDispatches()
+        if (dispatchesData) {
+          if (Array.isArray(dispatchesData)) {
+            // If API returns array of dispatches
+            const apiNews: NewsItem[] = dispatchesData.map((dispatch: any, idx: number) => {
+              // Parse timestamp - dispatches API uses 'published' field
+              let timestamp = new Date()
+              if (dispatch.published) {
+                timestamp = new Date(dispatch.published)
+              } else if (dispatch.timestamp) {
+                timestamp = new Date(dispatch.timestamp)
+              } else if (dispatch.created_at) {
+                timestamp = new Date(dispatch.created_at)
+              } else if (dispatch.date) {
+                timestamp = new Date(dispatch.date)
+              }
+              
+              return {
+                id: dispatch.id || `${idx}`,
+                title: dispatch.title || `DISPATCH ${idx + 1}`,
+                content: dispatch.message || dispatch.content || 'No content available',
+                timestamp: timestamp,
+                priority: dispatch.priority || 'normal'
+              }
+            })
+            setNews(apiNews)
+            return
+          } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
+            // If API returns object with dispatches array
+            const apiNews: NewsItem[] = dispatchesData.dispatches.map((dispatch: any, idx: number) => {
+              // Parse timestamp - try multiple formats
+              let timestamp = new Date()
+              if (dispatch.published) {
+                timestamp = new Date(dispatch.published)
+              } else if (dispatch.timestamp) {
+                timestamp = new Date(dispatch.timestamp)
+              } else if (dispatch.created_at) {
+                timestamp = new Date(dispatch.created_at)
+              } else if (dispatch.date) {
+                timestamp = new Date(dispatch.date)
+              }
+              
+              return {
+                id: dispatch.id || `${idx}`,
+                title: dispatch.title || `DISPATCH ${idx + 1}`,
+                content: dispatch.message || dispatch.content || 'No content available',
+                timestamp: timestamp,
+                priority: dispatch.priority || 'normal'
+              }
+            })
+            setNews(apiNews)
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load dispatches from API:', error)
+      }
+
+      // Fallback: Generate news from war status data with varied timestamps
       if (warStatus) {
         // War status update
         newsItems.push({
           id: '1',
           title: 'ONGOING GALACTIC WAR STATUS',
-          content: `Current mission success rate: ${warStatus.statistics?.missionSuccessRate}%. Total active personnel: ${warStatus.statistics?.playerCount?.toLocaleString()}. Continue spreading managed democracy.`,
+          content: `Total active personnel: ${warStatus.statistics?.playerCount?.toLocaleString()}. Continue spreading managed democracy.`,
           timestamp: new Date(),
           priority: 'normal'
         })
 
-        // Victory announcement
+        // Victory announcement (1 hour ago)
         if (warStatus.statistics?.missionsWon > warStatus.statistics?.missionsLost) {
           newsItems.push({
             id: '2',
@@ -42,18 +104,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
           })
         }
 
-        // Impact alert
-        if (warStatus.impactMultiplier) {
-          newsItems.push({
-            id: '3',
-            title: '⚡ WAR EFFORT IMPACT',
-            content: `Current war effort effectiveness multiplier: ${(warStatus.impactMultiplier * 100).toFixed(2)}%. All personnel are performing admirably in this sector.`,
-            timestamp: new Date(Date.now() - 7200000),
-            priority: 'normal'
-          })
-        }
-
-        // Enemy intel
+        // Enemy intel (3 hours ago)
         const totalEnemyKills = (warStatus.statistics?.terminidKills || 0) + 
                                 (warStatus.statistics?.automatonKills || 0) + 
                                 (warStatus.statistics?.illuminateKills || 0)
@@ -67,7 +118,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
           })
         }
 
-        // Personnel casualty update
+        // Personnel casualty update (4 hours ago)
         if (warStatus.statistics?.deaths) {
           newsItems.push({
             id: '5',
@@ -82,14 +133,14 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
       setNews(newsItems)
     }
 
-    generateNews()
+    loadDispatches()
   }, [warStatus])
 
   return (
     <div className="news-container">
       <div className="news-header">
-        <h2>📡 HELLDIVERS 2 COMMAND DISPATCH</h2>
-        <p className="news-subheader">LIVE TACTICAL BRIEFINGS & WAR UPDATES</p>
+        <h2>📡 COMMAND DISPATCHES</h2>
+        <p className="news-subheader">LATEST NEWS & ANNOUNCEMENTS</p>
       </div>
 
       <div className="news-feed">
@@ -98,22 +149,24 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
             <p>Loading tactical briefings...</p>
           </div>
         ) : (
-          news.map((item) => (
-            <div key={item.id} className={`news-item priority-${item.priority}`}>
-              <div className="news-priority-indicator">
-                {item.priority === 'critical' && '🔴'}
-                {item.priority === 'high' && '🟠'}
-                {item.priority === 'normal' && '🟡'}
+          news
+            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+            .map((item) => (
+              <div key={item.id} className={`news-item priority-${item.priority}`}>
+                <div className="news-priority-indicator">
+                  {item.priority === 'critical' && '🔴'}
+                  {item.priority === 'high' && '🟠'}
+                  {item.priority === 'normal' && '🟡'}
+                </div>
+                <div className="news-content">
+                  <h3 className="news-title">{item.title}</h3>
+                  <p className="news-text">{item.content}</p>
+                  <span className="news-timestamp">
+                    {item.timestamp.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              <div className="news-content">
-                <h3 className="news-title">{item.title}</h3>
-                <p className="news-text">{item.content}</p>
-                <span className="news-timestamp">
-                  {item.timestamp.toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          ))
+            ))
         )}
       </div>
     </div>

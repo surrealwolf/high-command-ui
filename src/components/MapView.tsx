@@ -9,7 +9,10 @@ interface Planet {
   health?: number
   maxHealth?: number
   currentOwner?: string
+  owner?: string
   biomeType?: string
+  biome?: string
+  event?: any
   [key: string]: any
 }
 
@@ -21,13 +24,14 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   
   const [planets, setPlanets] = useState<Planet[]>([])  // Start empty, show loading animation
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
+  const [selectedSector, setSelectedSector] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
   // viewBox state for SVG zoom/pan: x, y, width, height
-  // With 261 planets spread across ±750 from center (400, 400):
-  // - All planets fit in range roughly -350 to 1150 for both X and Y
-  // - Ultra-wide viewBox for maximum planet separation
-  const [viewBox, setViewBox] = useState({ x: -250, y: -250, w: 1300, h: 1300 })
+  // With planets spread across ±2000 from center (2000, 2000):
+  // - All planets fit in range roughly -2100 to 4100 for both X and Y
+  // - Massive viewBox for maximum planet separation
+  const [viewBox, setViewBox] = useState({ x: -2100, y: -2100, w: 6200, h: 6200 })
   const svgRef = useRef<SVGSVGElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const isPanning = useRef(false)
@@ -49,14 +53,14 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           console.log('API returned:', data.length, 'planets')
           
           if (data && Array.isArray(data) && data.length > 0) {
-            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 400, 400)
-            // Map -0.93 to -750 and 0.93 to 750, giving us range of ±750 around center (maximum spread)
+            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
+            // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
             // Invert Y axis so that positive Y values go up instead of down
             const scaledPlanets = data.map(planet => ({
               ...planet,
               position: planet.position ? {
-                x: (planet.position.x || 0) * 750,  // Scale from normalized [-0.93, 0.93] to [-750, 750]
-                y: -(planet.position.y || 0) * 750   // Negate Y so up is up
+                x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
+                y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
               } : undefined
             }))
             
@@ -69,8 +73,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             const scaledPlanets = data.planets.map((planet: Planet) => ({
               ...planet,
               position: planet.position ? {
-                x: (planet.position.x || 0) * 750,
-                y: -(planet.position.y || 0) * 750  // Negate Y so up is up
+                x: (planet.position.x || 0) * 2000,
+                y: -(planet.position.y || 0) * 2000  // Negate Y so up is up
               } : undefined
             }))
             console.log('Using scaled planets from data.planets:', scaledPlanets.length)
@@ -98,21 +102,22 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   }, [])
 
   const getPlanetStatus = (planet: any) => {
-    // Use owner field directly for faction colors
-    if (planet.owner === 'Humans') return 'liberated'
-    if (planet.owner === 'Terminids') return 'under-siege'
-    if (planet.owner === 'Automatons') return 'contested-automaton'
-    if (planet.owner === 'Illuminate') return 'contested-illuminate'
+    // Use owner field first (authoritative faction control), then fall back to currentOwner
+    const faction = planet.owner || planet.currentOwner
     
-    // Fallback to currentOwner if owner not available
-    if (planet.currentOwner === 'Humans') return 'liberated'
-    if (planet.currentOwner === 'Terminids') return 'under-siege'
-    if (planet.currentOwner === 'Automatons') return 'contested-automaton'
-    if (planet.currentOwner === 'Illuminate') return 'contested-illuminate'
+    if (faction === 'Humans') return 'liberated'
+    if (faction === 'Terminids') return 'under-siege'
+    if (faction === 'Automaton' || faction === 'Automatons') return 'contested-automaton'
+    if (faction === 'Illuminate') return 'contested-illuminate'
     
     // Debug: log neutral planets to see their structure
-    if (!planet.owner && !planet.currentOwner) {
-      console.log('Neutral planet:', { name: planet.name, owner: planet.owner, currentOwner: planet.currentOwner, faction: planet.faction, controllingFaction: planet.controllingFaction, keys: Object.keys(planet).slice(0, 10) })
+    if (!faction) {
+      console.log('Neutral planet:', { 
+        name: planet.name, 
+        owner: planet.owner, 
+        currentOwner: planet.currentOwner,
+        keys: Object.keys(planet).slice(0, 15)
+      })
     }
     
     return 'neutral'
@@ -133,6 +138,15 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     }
   }
 
+  const getEventColor = (event: any) => {
+    if (!event) return null
+    // Map event faction to blink color
+    if (event.faction === 'Terminids') return '#ffff00'  // Yellow for Terminids
+    if (event.faction === 'Automaton' || event.faction === 'Automatons') return '#ff0000'  // Red for Automatons
+    if (event.faction === 'Illuminate') return '#9933ff'  // Purple for Illuminate
+    return '#ff00ff'  // Magenta for unknown
+  }
+
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       liberated: 'LIBERATED',
@@ -142,43 +156,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
       neutral: 'NEUTRAL'
     }
     return labels[status] || 'UNKNOWN'
-  }
-
-  // Calculate position based on actual position data or use optimal circular layout as fallback
-  const getPlanetPosition = (planet: Planet, index: number, total: number) => {
-    // If planet has position data, use it directly (coordinates come from API or mock data)
-    if (planet.position && typeof planet.position === 'object') {
-      const x = typeof planet.position.x === 'number' ? planet.position.x : 0
-      const y = typeof planet.position.y === 'number' ? planet.position.y : 0
-      return { x, y }
-    }
-
-    // Fallback: arrange in optimal circular orbits by distance
-    // Inner ring (planets 0-2): radius 140, outer ring (planets 3+): radius 280
-    if (total <= 3) {
-      // Small set: use inner ring only
-      const radius = 140
-      const angle = (index / total) * Math.PI * 2
-      const x = Math.cos(angle) * radius
-      const y = Math.sin(angle) * radius
-      return { x, y }
-    } else if (index < Math.ceil(total / 2)) {
-      // First half: inner ring
-      const radius = 160
-      const angle = (index / Math.ceil(total / 2)) * Math.PI * 2
-      const x = Math.cos(angle) * radius
-      const y = Math.sin(angle) * radius
-      return { x, y }
-    } else {
-      // Second half: outer ring
-      const radius = 280
-      const relIndex = index - Math.ceil(total / 2)
-      const count = total - Math.ceil(total / 2)
-      const angle = (relIndex / count) * Math.PI * 2 + Math.PI / count // offset to avoid alignment with inner
-      const x = Math.cos(angle) * radius
-      const y = Math.sin(angle) * radius
-      return { x, y }
-    }
   }
 
   // Get unique sectors for visualization
@@ -198,7 +175,37 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   const sectorMap = getSectorInfo()
 
-  // Smoothly animate viewBox from current to target over duration (ms)
+  // Calculate grid layout for sector containers (puzzle-piece style)
+  const getSectorLayout = () => {
+    const sectorEntries = Object.entries(sectorMap)
+    const sectorCount = sectorEntries.length
+    
+    // Determine grid dimensions to fit all sectors (roughly square)
+    const gridCols = Math.ceil(Math.sqrt(sectorCount))
+    const gridRows = Math.ceil(sectorCount / gridCols)
+    
+    // Each sector container is 800x800px with no gap
+    const sectorSize = 800
+    const gridGap = 0  // No gap for puzzle-piece effect
+    
+    const layouts: { [key: string]: { x: number; y: number; w: number; h: number } } = {}
+    
+    sectorEntries.forEach(([sector, _], index) => {
+      const col = index % gridCols
+      const row = Math.floor(index / gridCols)
+      
+      layouts[sector] = {
+        x: col * (sectorSize + gridGap),
+        y: row * (sectorSize + gridGap),
+        w: sectorSize,
+        h: sectorSize
+      }
+    })
+    
+    return { layouts, gridCols, gridRows, sectorSize }
+  }
+
+  const sectorLayout = getSectorLayout()
   const animateViewBox = (target: { x: number; y: number; w: number; h: number }, duration = 300) => {
     const start = { ...viewBox }
     const startTime = performance.now()
@@ -333,7 +340,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
               className="zoom-btn reset"
               onClick={() => {
                 // reset to default centered view (animated)
-                animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
+                animateViewBox({ x: -2100, y: -2100, w: 6200, h: 6200 }, 360)
+                setSelectedSector(null)
               }}
               title="Reset Zoom"
             >
@@ -379,120 +387,169 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
         {/* SVG orbital paths */}
   <svg ref={svgRef} className="orbital-map" viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}>
           {/* Orbital rings - visual guides for the galactic map */}
-          <circle cx="400" cy="400" r="160" fill="none" stroke="rgba(255, 179, 0, 0.04)" strokeWidth="1" strokeDasharray="4,4" />
-          <circle cx="400" cy="400" r="280" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="1" strokeDasharray="4,4" />
-          <circle cx="400" cy="400" r="750" fill="none" stroke="rgba(255, 179, 0, 0.1)" strokeWidth="1.5" />
+          <circle cx="2000" cy="2000" r="500" fill="none" stroke="rgba(255, 179, 0, 0.04)" strokeWidth="2" strokeDasharray="10,10" />
+          <circle cx="2000" cy="2000" r="1000" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="2" strokeDasharray="10,10" />
+          <circle cx="2000" cy="2000" r="2000" fill="none" stroke="rgba(255, 179, 0, 0.1)" strokeWidth="3" />
 
-          {/* Sector connecting lines - draw lines between planets in same sector */}
-          {planets && planets.length > 1 && (
-            <g opacity="0.15">
-              {Object.entries(sectorMap).map(([sector, sectorPlanets]: [string, any]) => 
-                sectorPlanets.length > 1 ? (
-                  sectorPlanets.map((planet: Planet, i: number) => {
-                    const nextPlanet = sectorPlanets[(i + 1) % sectorPlanets.length]
-                    const pos1 = getPlanetPosition(planet, 0, planets.length)
-                    const pos2 = getPlanetPosition(nextPlanet, 0, planets.length)
-                    return (
-                      <line
-                        key={`sector-line-${sector}-${i}`}
-                        x1={400 + pos1.x}
-                        y1={400 + pos1.y}
-                        x2={400 + pos2.x}
-                        y2={400 + pos2.y}
-                        stroke="rgba(102, 255, 0, 0.3)"
-                        strokeWidth="0.5"
-                        strokeDasharray="5,5"
-                      />
-                    )
-                  })
-                ) : null
-              )}
-            </g>
-          )}
-
-          {/* Debug: Coordinate crosshairs at Super Earth center */}
-          <g opacity="0.3" stroke="rgba(255, 179, 0, 0.5)" strokeWidth="1">
-            <line x1="350" y1="400" x2="450" y2="400" />
-            <line x1="400" y1="350" x2="400" y2="450" />
-            <circle cx="400" cy="400" r="2" fill="rgba(255, 179, 0, 1)" />
-            <text x="410" y="395" fill="rgba(255, 179, 0, 0.7)" fontSize="10">(400, 400)</text>
-          </g>
-
-          {/* Connection lines to Super Earth from far planets */}
-          {planets && (
-            <g opacity="0.1">
-              {planets.map((planet: Planet, idx: number) => {
-                const pos = getPlanetPosition(planet, idx, planets.length)
-                const distance = Math.sqrt(pos.x * pos.x + pos.y * pos.y)
-                // Only draw lines for planets far from center
-                if (distance > 150) {
-                  return (
-                    <line
-                      key={`branch-${idx}`}
-                      x1="400"
-                      y1="400"
-                      x2={400 + pos.x}
-                      y2={400 + pos.y}
-                      stroke="rgba(255, 179, 0, 0.2)"
-                      strokeWidth="0.8"
-                    />
-                  )
-                }
-                return null
-              })}
-            </g>
-          )}
-
-          {/* Planet positions */}
-          {planets && planets.map((planet: Planet, idx: number) => {
-            const pos = getPlanetPosition(planet, idx, planets.length)
-            const status = getPlanetStatus(planet)
-            const color = getStatusColor(status)
-            const isSelected = selectedPlanet?.index === planet.index
-
+          {/* Sector containers - grid-based puzzle layout */}
+          {Object.entries(sectorMap).map(([sector, sectorPlanets]: [string, any]) => {
+            if (sectorPlanets.length === 0) return null
+            
+            const layout = sectorLayout.layouts[sector]
+            if (!layout) return null
+            
+            const isSelected = selectedSector === sector
+            const sectorCenterX = layout.x + layout.w / 2
+            
+            // Place planets inside sector container in a grid
+            const planetsPerRow = Math.ceil(Math.sqrt(sectorPlanets.length))
+            const planetSize = 24
+            const padding = 40
+            const availableWidth = layout.w - padding * 2
+            const availableHeight = layout.h - padding * 2
+            const planetSpacingX = availableWidth / planetsPerRow
+            const planetSpacingY = availableHeight / planetsPerRow
+            
             return (
-              <g key={planet.index || idx}>
-                {/* Glow effect */}
-                <circle
-                  cx={400 + pos.x}
-                  cy={400 + pos.y}
-                  r="28"
-                  fill={color}
-                  opacity="0.2"
-                  className="planet-glow"
-                />
-
-                {/* Planet */}
-                <circle
-                  cx={400 + pos.x}
-                  cy={400 + pos.y}
-                  r={isSelected ? 18 : 16}
-                  fill={color}
-                  stroke={isSelected ? '#ffff00' : 'rgba(255, 255, 255, 0.3)'}
-                  strokeWidth={isSelected ? 3 : 1}
+              <g key={`sector-${sector}`}>
+                {/* Sector background - solid barrier */}
+                <rect
+                  x={layout.x}
+                  y={layout.y}
+                  width={layout.w}
+                  height={layout.h}
+                  fill={isSelected ? 'rgba(255, 179, 0, 0.15)' : 'rgba(0, 0, 0, 0.3)'}
+                  stroke={isSelected ? 'rgba(255, 179, 0, 0.9)' : 'rgba(255, 179, 0, 0.4)'}
+                  strokeWidth={isSelected ? 3 : 2}
                   style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
-                  onClick={() => setSelectedPlanet(planet)}
-                  className={isSelected ? 'planet-selected' : ''}
+                  onClick={() => {
+                    setSelectedSector(isSelected ? null : sector)
+                    if (!isSelected) {
+                      // Zoom into sector
+                      const padding = 50
+                      animateViewBox({
+                        x: layout.x - padding,
+                        y: layout.y - padding,
+                        w: layout.w + padding * 2,
+                        h: layout.h + padding * 2
+                      }, 300)
+                    } else {
+                      // Reset zoom
+                      animateViewBox({ x: -2100, y: -2100, w: 6200, h: 6200 }, 300)
+                    }
+                  }}
                 />
-
-                {/* Planet label */}
+                
+                {/* Sector label */}
                 <text
-                  x={400 + pos.x}
-                  y={400 + pos.y + 30}
+                  x={sectorCenterX}
+                  y={layout.y + 30}
                   textAnchor="middle"
-                  fill="#e0e0e0"
-                  fontSize="12"
+                  fill={isSelected ? 'rgba(255, 179, 0, 0.95)' : 'rgba(255, 179, 0, 0.6)'}
+                  fontSize={isSelected ? "20" : "16"}
                   fontFamily="'Courier New', monospace"
                   fontWeight="bold"
-                  className="planet-label"
-                  onClick={() => setSelectedPlanet(planet)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', transition: 'all 0.3s ease', pointerEvents: 'none' }}
                 >
-                  {planet.name}
+                  {sector}
                 </text>
+                
+                {/* Planet count badge */}
+                <circle
+                  cx={layout.x + layout.w - 30}
+                  cy={layout.y + 30}
+                  r="18"
+                  fill={isSelected ? 'rgba(255, 179, 0, 0.3)' : 'rgba(0, 0, 0, 0.6)'}
+                  stroke={isSelected ? 'rgba(255, 179, 0, 0.9)' : 'rgba(255, 179, 0, 0.5)'}
+                  strokeWidth="2"
+                  style={{ pointerEvents: 'none', transition: 'all 0.3s ease' }}
+                />
+                <text
+                  x={layout.x + layout.w - 30}
+                  y={layout.y + 37}
+                  textAnchor="middle"
+                  fill={isSelected ? 'rgba(255, 179, 0, 0.95)' : 'rgba(255, 179, 0, 0.7)'}
+                  fontSize="14"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {sectorPlanets.length}
+                </text>
+                
+                {/* Planets in grid layout inside sector */}
+                {sectorPlanets.map((planet: Planet, planetIdx: number) => {
+                  const col = planetIdx % planetsPerRow
+                  const row = Math.floor(planetIdx / planetsPerRow)
+                  const x = layout.x + padding + col * planetSpacingX + planetSpacingX / 2
+                  const y = layout.y + padding + 60 + row * planetSpacingY + planetSpacingY / 2
+                  
+                  const status = getPlanetStatus(planet)
+                  const color = getStatusColor(status)
+                  const isPlanetSelected = selectedPlanet?.index === planet.index
+                  const hasEvent = planet.event && planet.event !== null
+                  const eventColor = hasEvent ? getEventColor(planet.event) : null
+                  
+                  return (
+                    <g key={`${sector}-planet-${planetIdx}`}>
+                      {/* Event glow */}
+                      {hasEvent && (
+                        <>
+                          <defs>
+                            <style>{`
+                              @keyframes event-blink-${planet.index} {
+                                0%, 100% { opacity: 0.3; }
+                                50% { opacity: 0.8; }
+                              }
+                              .planet-event-glow-${planet.index} {
+                                animation: event-blink-${planet.index} 0.6s infinite;
+                              }
+                            `}</style>
+                          </defs>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={planetSize + 10}
+                            fill={eventColor || '#ff00ff'}
+                            className={`planet-event-glow-${planet.index}`}
+                          />
+                        </>
+                      )}
+                      
+                      {/* Planet */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={isPlanetSelected ? planetSize + 4 : planetSize}
+                        fill={color}
+                        stroke={isPlanetSelected ? '#ffff00' : 'rgba(255, 255, 255, 0.2)'}
+                        strokeWidth={isPlanetSelected ? 2 : 1}
+                        style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                        onClick={() => setSelectedPlanet(planet)}
+                      />
+                      
+                      {/* Planet label tooltip */}
+                      <title>{planet.name}</title>
+                    </g>
+                  )
+                })}
               </g>
             )
           })}
+
+          {/* Grid background pattern */}
+          <defs>
+            <pattern id="grid" width="800" height="800" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse">
+              <path d="M 800 0 L 0 0 0 800" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="1"/>
+            </pattern>
+          </defs>
+          
+          {/* Optional: grid background - comment out if not desired */}
+          {/* <rect width="10000" height="10000" fill="url(#grid)" /> */}
+
+          {/* Orbital rings - visual guides for the galactic map */}
+          <circle cx="2000" cy="2000" r="500" fill="none" stroke="rgba(255, 179, 0, 0.04)" strokeWidth="2" strokeDasharray="10,10" />
+          <circle cx="2000" cy="2000" r="1000" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="2" strokeDasharray="10,10" />
+          <circle cx="2000" cy="2000" r="2000" fill="none" stroke="rgba(255, 179, 0, 0.1)" strokeWidth="3" />
         </svg>
       </div>
 
@@ -588,6 +645,53 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   <span className="detail-value">
                     {selectedPlanet.health.toLocaleString()} / {selectedPlanet.maxHealth.toLocaleString()}
                   </span>
+                </div>
+              )}
+
+              {/* Display active event if present */}
+              {selectedPlanet.event && (
+                <div className="detail-row event-info">
+                  <span className="detail-label">🔴 ACTIVE EVENT:</span>
+                  <div className="event-details">
+                    <div className="event-detail">
+                      <span className="event-label">FACTION:</span>
+                      <span className="event-value">{selectedPlanet.event.faction}</span>
+                    </div>
+                    <div className="event-detail">
+                      <span className="event-label">TYPE:</span>
+                      <span className="event-value">
+                        {selectedPlanet.event.eventType === 1 ? 'ATTACK' : 
+                         selectedPlanet.event.eventType === 2 ? 'DEFENSE' :
+                         selectedPlanet.event.eventType === 3 ? 'SABOTAGE' :
+                         `TYPE ${selectedPlanet.event.eventType}`}
+                      </span>
+                    </div>
+                    {selectedPlanet.event.health !== undefined && selectedPlanet.event.maxHealth && (
+                      <div className="event-detail">
+                        <span className="event-label">PROGRESS:</span>
+                        <div className="event-health-bar">
+                          <div
+                            className="event-health-fill"
+                            style={{
+                              width: `${(selectedPlanet.event.health / selectedPlanet.event.maxHealth) * 100}%`,
+                              backgroundColor: getEventColor(selectedPlanet.event) || '#ff00ff'
+                            }}
+                          ></div>
+                        </div>
+                        <span className="event-value">
+                          {selectedPlanet.event.health.toLocaleString()} / {selectedPlanet.event.maxHealth.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {selectedPlanet.event.endTime && (
+                      <div className="event-detail">
+                        <span className="event-label">ENDS:</span>
+                        <span className="event-value">
+                          {new Date(selectedPlanet.event.endTime).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

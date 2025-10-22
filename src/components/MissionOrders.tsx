@@ -22,59 +22,59 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   useEffect(() => {
     const loadMissions = async () => {
       try {
+        // Fetch assignments from API (exposed as major orders endpoint)
+        const majorOrders = await HighCommandAPI.getMajorOrders()
+        if (majorOrders) {
+          // If API provides missions, use them; otherwise show default
+          if (majorOrders.orders && Array.isArray(majorOrders.orders)) {
+            const apiMissions: Mission[] = majorOrders.orders.map((order: any, idx: number) => ({
+              id: order.id || `${idx}`,
+              title: order.title || `MAJOR ORDER ${idx + 1}`,
+              objective: order.description || order.objective || 'Objective classified',
+              difficulty: order.difficulty || 'Medium',
+              priority: order.priority || 'normal',
+              status: order.status || 'active'
+            }))
+            setMissions(apiMissions)
+          }
+        }
+        
+        // Fetch planets for deployment zones
         const planetsData = await HighCommandAPI.getPlanets()
         if (planetsData && Array.isArray(planetsData)) {
           setPlanets(planetsData.slice(0, 5))
         }
       } catch (error) {
-        console.error('Failed to load planets:', error)
+        console.error('Failed to load major orders:', error)
+        // Fallback: use default missions if API fails
+        const defaultMissions: Mission[] = [
+          {
+            id: '1',
+            title: 'OPERATION: LIBERATION DAWN',
+            objective: 'Eliminate Terminid forces and secure strategic positions. Maintain heavy weapons support.',
+            difficulty: 'Hard',
+            priority: 'critical',
+            status: 'active'
+          },
+          {
+            id: '2',
+            title: 'PLANETARY DEFENSE PROTOCOL',
+            objective: 'Protect civilian installations from Automaton incursions. Establish defensive perimeter.',
+            difficulty: 'Extreme',
+            priority: 'critical',
+            status: 'active'
+          },
+          {
+            id: '3',
+            title: 'RECON MISSION: SECTOR 7',
+            objective: 'Scout enemy positions and gather intelligence. Avoid unnecessary engagement.',
+            difficulty: 'Medium',
+            priority: 'high',
+            status: 'available'
+          }
+        ]
+        setMissions(defaultMissions)
       }
-
-      // Generate mission orders
-      const missionList: Mission[] = [
-        {
-          id: '1',
-          title: 'OPERATION: LIBERATION DAWN',
-          objective: 'Eliminate Terminid forces and secure strategic positions. Maintain heavy weapons support.',
-          difficulty: 'Hard',
-          priority: 'critical',
-          status: 'active'
-        },
-        {
-          id: '2',
-          title: 'PLANETARY DEFENSE PROTOCOL',
-          objective: 'Protect civilian installations from Automaton incursions. Establish defensive perimeter.',
-          difficulty: 'Extreme',
-          priority: 'critical',
-          status: 'active'
-        },
-        {
-          id: '3',
-          title: 'RECON MISSION: SECTOR 7',
-          objective: 'Scout enemy positions and gather intelligence. Avoid unnecessary engagement.',
-          difficulty: 'Medium',
-          priority: 'high',
-          status: 'available'
-        },
-        {
-          id: '4',
-          title: 'SUPPLY LINE CONTROL',
-          objective: 'Secure resource extraction zones. Neutralize opposing forces.',
-          difficulty: 'Medium',
-          priority: 'normal',
-          status: 'available'
-        },
-        {
-          id: '5',
-          title: 'STRATEGIC STRIKE: BUG NEST',
-          objective: 'Locate and destroy primary Terminid hive structure. High-risk operation.',
-          difficulty: 'Extreme',
-          priority: 'high',
-          status: 'available'
-        }
-      ]
-
-      setMissions(missionList)
     }
 
     loadMissions()
