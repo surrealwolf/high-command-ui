@@ -177,10 +177,6 @@ function App() {
                 <span className="stat-label">MISSIONS WON</span>
                 <span className="stat-value">{warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'}</span>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">ILLUMINATE KILLS</span>
-                <span className="stat-value">{(warStatus.statistics?.illuminateKills ? Math.floor(warStatus.statistics.illuminateKills / 1e9) : 0)}B</span>
-              </div>
               {warStatus?.statistics?.factionStats && Object.entries(warStatus.statistics.factionStats).map(([faction, data]: [string, any]) => (
                 <div key={faction} className="stat-item faction-item">
                   <span className="stat-label">{faction.toUpperCase().substring(0, 8)}</span>
