@@ -115,19 +115,24 @@ const parseDispatchMessage = (message: string): JSX.Element => {
   return <>{result}</>
 }
 
-// Helper function to extract title from dispatch message (first <i=3>...</i> tag, or first line)
+// Helper function to extract title from dispatch message
 const extractTitleFromMessage = (message: string): string => {
   // First try to find <i=3>...</i> tag
-  const match = message.match(/<i=3>(.*?)<\/i>/)
-  if (match && match[1]) {
-    return match[1]
+  const match3 = message.match(/<i=3>(.*?)<\/i>/)
+  if (match3 && match3[1]) {
+    return match3[1]
   }
   
-  // Otherwise, try to extract first sentence or first line before newlines
-  const lines = message.split('\n')
-  if (lines[0]) {
-    // Strip any tags from the first line
-    const stripped = lines[0].replace(/<\/?i=\d+>/g, '')
+  // Otherwise, try to find any <i=\d>...</i> tag on first line
+  const firstLine = message.split('\n')[0]
+  const matchAny = firstLine.match(/<i=\d>(.*?)<\/i>/)
+  if (matchAny && matchAny[1]) {
+    return matchAny[1]
+  }
+  
+  // Otherwise, strip tags from first line
+  if (firstLine) {
+    const stripped = firstLine.replace(/<\/?i=\d+>/g, '')
     if (stripped.length > 0) {
       return stripped
     }
@@ -136,20 +141,14 @@ const extractTitleFromMessage = (message: string): string => {
   return message.substring(0, 50)
 }
 
-// Helper function to remove first tagged line or <i=3>...</i> tag and leading whitespace from content
+// Helper function to remove first line (which becomes the title)
 const stripTitleFromMessage = (message: string): string => {
-  // First try to remove <i=3>...</i> tag
-  let result = message.replace(/<i=3>.*?<\/i>\s*/, '')
-  
-  // If that didn't remove anything, try to remove first line
-  if (result === message) {
-    const lines = message.split('\n')
-    if (lines.length > 1) {
-      result = lines.slice(1).join('\n')
-    }
+  const lines = message.split('\n')
+  if (lines.length > 1) {
+    // Remove first line and any leading empty lines
+    return lines.slice(1).join('\n').replace(/^\s*\n+/, '')
   }
-  
-  return result
+  return ''
 }
 
 // Helper function to map dispatch to NewsItem

@@ -49,7 +49,7 @@
   border: 3px solid rgba(255, 179, 0, 0.2);
   border-top: 3px solid #ffb300;
   border-radius: 50%;
-  animation: spin 300s linear infinite;
+  animation: spin 3s linear infinite;
 }
 
 @keyframes spin {
