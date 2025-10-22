@@ -376,49 +376,74 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   return (
     <div className="map-view">
-          {/* Zoom Controls (viewBox-based) */}
-          <div className="zoom-controls">
-            <button
-              className="zoom-btn"
-              onClick={() => {
-                // zoom out: increase viewBox size (animated)
-                const factor = 1.25
-                const newW = Math.min(4000, viewBox.w * factor)
-                const newH = Math.min(4000, viewBox.h * factor)
-                const nx = viewBox.x - (newW - viewBox.w) / 2
-                const ny = viewBox.y - (newH - viewBox.h) / 2
-                animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
-              }}
-              title="Zoom Out"
-            >
-              −
-            </button>
-            <span className="zoom-level">{Math.round((800 / viewBox.w) * 100)}%</span>
-            <button
-              className="zoom-btn"
-              onClick={() => {
-                // zoom in: decrease viewBox size (animated)
-                const factor = 1 / 1.25
-                const newW = Math.max(200, viewBox.w * factor)
-                const newH = Math.max(200, viewBox.h * factor)
-                const nx = viewBox.x + (viewBox.w - newW) / 2
-                const ny = viewBox.y + (viewBox.h - newH) / 2
-                animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 200)
-              }}
-              title="Zoom In"
-            >
-              +
-            </button>
-            <button
-              className="zoom-btn reset"
-              onClick={() => {
-                // reset to default centered view (animated)
-                animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
-              }}
-              title="Reset Zoom"
-            >
-              ⊙
-            </button>
+          {/* Zoom Controls (viewBox-based) and Legend */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="zoom-controls">
+              <button
+                className="zoom-btn"
+                onClick={() => {
+                  // zoom out: increase viewBox size (animated)
+                  const factor = 1.25
+                  const newW = Math.min(4000, viewBox.w * factor)
+                  const newH = Math.min(4000, viewBox.h * factor)
+                  const nx = viewBox.x - (newW - viewBox.w) / 2
+                  const ny = viewBox.y - (newH - viewBox.h) / 2
+                  animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
+                }}
+                title="Zoom Out"
+              >
+                −
+              </button>
+              <span className="zoom-level">{Math.round((800 / viewBox.w) * 100)}%</span>
+              <button
+                className="zoom-btn"
+                onClick={() => {
+                  // zoom in: decrease viewBox size (animated)
+                  const factor = 1 / 1.25
+                  const newW = Math.max(200, viewBox.w * factor)
+                  const newH = Math.max(200, viewBox.h * factor)
+                  const nx = viewBox.x + (viewBox.w - newW) / 2
+                  const ny = viewBox.y + (viewBox.h - newH) / 2
+                  animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 200)
+                }}
+                title="Zoom In"
+              >
+                +
+              </button>
+              <button
+                className="zoom-btn reset"
+                onClick={() => {
+                  // reset to default centered view (animated)
+                  animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
+                }}
+                title="Reset Zoom"
+              >
+                ⊙
+              </button>
+            </div>
+
+            {/* Legend */}
+            <div className="map-legend">
+              <h4>📡 STATUS</h4>
+              <div className="legend-items">
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
+                  <span>Liberated</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
+                  <span>Terminids</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
+                  <span>Automaton</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
+                  <span>Illuminate</span>
+                </div>
+              </div>
+            </div>
           </div>
 
       <div className="map-container" ref={containerRef}>
@@ -613,8 +638,14 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
         </svg>
       </div>
 
-      {/* Planet details panel */}
-      <div className="map-details">
+      {/* Planet details panel - popup */}
+      <div 
+        className={`map-details ${selectedPlanet ? 'active' : ''}`}
+        style={selectedPlanet ? {
+          left: `${(window.innerWidth / 2) + 100}px`,
+          top: `${(window.innerHeight / 2) - 100}px`
+        } : {}}
+      >
         {selectedPlanet ? (
           <div className="planet-details">
             <div className="details-header">
@@ -769,29 +800,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             <p>Click on any planet to view its details</p>
           </div>
         )}
-      </div>
-
-      {/* Legend */}
-      <div className="map-legend">
-        <h4>📡 STATUS LEGEND</h4>
-        <div className="legend-items">
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
-            <span>Liberated</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
-            <span>Terminids</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
-            <span>Automaton</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
-            <span>Illuminate</span>
-          </div>
-        </div>
       </div>
     </div>
   )
