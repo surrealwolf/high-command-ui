@@ -167,10 +167,10 @@
 
 @keyframes pulse-event {
   0%, 100% {
-    filter: drop-shadow(0 0 6px rgba(255, 100, 0, 0.8));
+    filter: drop-shadow(0 0 6px rgba(255, 105, 180, 0.8));
   }
   50% {
-    filter: drop-shadow(0 0 16px rgba(255, 200, 0, 1));
+    filter: drop-shadow(0 0 16px rgba(255, 20, 147, 1));
   }
 }
 
@@ -183,19 +183,9 @@
   }
 }
 
-@keyframes emoji-pulse {
-  0%, 100% {
-    font-size: 20pt;
-    opacity: 1;
-  }
-  50% {
-    font-size: 24pt;
-    opacity: 0.8;
-  }
-}
-
 .planet-event-emoji {
-  animation: emoji-pulse 2s ease-in-out infinite;
+  /* Static emoji display - no animation */
+  pointer-events: none;
 }
 
 .map-details {

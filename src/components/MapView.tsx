@@ -165,13 +165,13 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   const getEventColor = (event: Event | null | undefined) => {
     if (!event) return null
-    // Map event faction to blink color
-    if (event.faction === 'Terminids') return '#ffff00'  // Yellow for Terminids
-    if (event.faction === 'Automaton' || event.faction === 'Automatons') return '#ff0000'  // Red for Automatons
-    if (event.faction === 'Illuminate') return '#9933ff'  // Purple for Illuminate
+    // Map event faction to pink color (all events use pink)
+    if (event.faction === 'Terminids') return '#ff69b4'  // Hot pink for Terminids
+    if (event.faction === 'Automaton' || event.faction === 'Automatons') return '#ff1493'  // Deep pink for Automatons
+    if (event.faction === 'Illuminate') return '#ff69b4'  // Hot pink for Illuminate
     // Debug unknown faction
     console.warn('Unknown event faction:', event.faction)
-    return '#ff00ff'  // Magenta for unknown
+    return '#ff69b4'  // Hot pink for unknown
   }
 
   const getFactionEmoji = (event: Event | null | undefined) => {
@@ -527,8 +527,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           {planets && planets.map((planet: Planet, idx: number) => {
             const pos = getPlanetPosition(planet, idx, planets.length)
             const status = getPlanetStatus(planet)
-            // Use status color for all planets (event emoji will be shown separately)
-            const color = getStatusColor(status)
+            // Use event color if planet has an event, otherwise use status color
+            const color = planet.event ? getEventColor(planet.event) || getStatusColor(status) : getStatusColor(status)
             const isSelected = selectedPlanet?.index === planet.index
             
             // Determine stroke color: selected = yellow, normal = faint white
