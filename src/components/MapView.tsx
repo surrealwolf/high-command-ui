@@ -40,6 +40,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   
   // Generate stars once on component mount
   const [stars] = useState(() => {
@@ -54,8 +56,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   // viewBox state for SVG zoom/pan: x, y, width, height
   // With planets spread across ±2000 from center (2000, 2000):
   // - All planets fit in range roughly -2100 to 4100 for both X and Y
-  // - Massive viewBox for maximum planet separation
-  const [viewBox, setViewBox] = useState({ x: -2100, y: -2100, w: 6200, h: 6200 })
+  // - Default: 20% zoom centered on Super Earth at (400, 400)
+  const [viewBox, setViewBox] = useState({ x: -220, y: -220, w: 1240, h: 1240 })
   const svgRef = useRef<SVGSVGElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const isPanning = useRef(false)
@@ -63,59 +65,95 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const animRef = useRef<number | null>(null)
 
   // Fetch planets from API on mount
-  useEffect(() => {
-    const loadPlanets = async () => {
-      if (warStatus?.planets && warStatus.planets.length > 0) {
-        // Use warStatus planets if available
-        console.log('Setting planets from warStatus')
-        setPlanets(warStatus.planets)
-      } else {
-        // Try to fetch from planets API endpoint
-        console.log('Fetching planets from API...')
-        try {
-          const data = await HighCommandAPI.getPlanets()
-          console.log('API returned:', data.length, 'planets')
-          
-          if (data && Array.isArray(data) && data.length > 0) {
-            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
-            // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
-            // Invert Y axis so that positive Y values go up instead of down
-            const scaledPlanets = data.map(planet => ({
-              ...planet,
-              position: planet.position ? {
-                x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
-                y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
-              } : undefined
-            }))
-            
-            console.log('Scaled planets:', scaledPlanets.length)
-            console.log('Sample planet positions:', scaledPlanets.slice(0, 3).map(p => ({ name: p.name, pos: p.position })))
-            setPlanets(scaledPlanets)
-            setIsLoading(false)
-          } else if (data?.planets && Array.isArray(data.planets)) {
-            // Alternative response format
-            const scaledPlanets = data.planets.map((planet: Planet) => ({
-              ...planet,
-              position: planet.position ? {
-                x: (planet.position.x || 0) * 2000,
-                y: -(planet.position.y || 0) * 2000  // Negate Y so up is up
-              } : undefined
-            }))
-            console.log('Using scaled planets from data.planets:', scaledPlanets.length)
-            setPlanets(scaledPlanets)
-            setIsLoading(false)
-          } else {
-            console.log('API returned no valid data')
-            setIsLoading(false)
-          }
-        } catch (error) {
-          console.error('Failed to fetch planets:', error)
-          setIsLoading(false)
-        }
-      }
+  const loadPlanets = async () => {
+    setIsRefreshing(true)
+    console.log('🔄 Loading planets...')
+    console.log('warStatus?.planets exists:', !!warStatus?.planets)
+    console.log('warStatus?.planets length:', warStatus?.planets?.length || 0)
+    
+    if (warStatus?.planets && warStatus.planets.length > 0) {
+      // Use warStatus planets if available
+      console.log('✅ Setting planets from warStatus:', warStatus.planets.length)
+      setPlanets(warStatus.planets)
+      setLastRefresh(new Date())
+      setIsRefreshing(false)
+      return
     }
+    
+    // Try to fetch from planets API endpoint
+    console.log('🌍 Fetching planets from API...')
+    try {
+      const data = await HighCommandAPI.getPlanets()
+      console.log('📡 API response:', data)
+      
+      if (!data) {
+        console.warn('⚠️ API returned null/undefined')
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+      
+      let planetsArray: any[] = []
+      
+      // Check if data is directly an array
+      if (Array.isArray(data)) {
+        console.log('✅ Data is array with', data.length, 'planets')
+        planetsArray = data
+      } 
+      // Check if data has planets property
+      else if (data?.planets && Array.isArray(data.planets)) {
+        console.log('✅ Data has .planets property with', data.planets.length, 'planets')
+        planetsArray = data.planets
+      }
+      // Check if data has other array properties
+      else if (data?.result && Array.isArray(data.result)) {
+        console.log('✅ Data has .result property with', data.result.length, 'planets')
+        planetsArray = data.result
+      }
+      else {
+        console.warn('⚠️ API data structure not recognized:', Object.keys(data || {}))
+        console.log('Full response:', data)
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+      
+      if (planetsArray.length > 0) {
+        // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
+        // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
+        // Invert Y axis so that positive Y values go up instead of down
+        const scaledPlanets = planetsArray.map(planet => ({
+          ...planet,
+          position: planet.position ? {
+            x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
+            y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
+          } : undefined
+        }))
+        
+        console.log('✅ Scaled', scaledPlanets.length, 'planets')
+        console.log('Sample planets:', scaledPlanets.slice(0, 2).map(p => ({ name: p.name, index: p.index, pos: p.position })))
+        setPlanets(scaledPlanets)
+        setIsLoading(false)
+        setLastRefresh(new Date())
+        setIsRefreshing(false)
+      } else {
+        console.warn('⚠️ Planets array is empty')
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch planets:', error)
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
     loadPlanets()
-  }, [])
+    // Auto-refresh every hour (3600000 ms)
+    const interval = setInterval(loadPlanets, 3600000)
+    return () => clearInterval(interval)
+  }, [warStatus])
 
   // Rotate the star field slowly
   useEffect(() => {
@@ -370,6 +408,20 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   return (
     <div className="map-view">
+      <div className="map-header">
+        <h2>🌍 GALACTIC MAP</h2>
+        <div className="map-header-right">
+          <p className="last-refresh">Last refreshed: {lastRefresh.toLocaleTimeString()}</p>
+          <button 
+            className="refresh-button" 
+            onClick={loadPlanets} 
+            disabled={isRefreshing}
+            title="Manually refresh galactic map"
+          >
+            {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
+          </button>
+        </div>
+      </div>
       <div className="map-container" ref={containerRef}>
         {/* Zoom Controls (viewBox-based) */}
         <div className="zoom-controls">
@@ -378,8 +430,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             onClick={() => {
               // zoom out: increase viewBox size (animated)
               const factor = 1.25
-              const newW = Math.min(4000, viewBox.w * factor)
-              const newH = Math.min(4000, viewBox.h * factor)
+              const newW = Math.min(6200, viewBox.w * factor)
+              const newH = Math.min(6200, viewBox.h * factor)
               const nx = viewBox.x - (newW - viewBox.w) / 2
               const ny = viewBox.y - (newH - viewBox.h) / 2
               animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
@@ -407,8 +459,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           <button
             className="zoom-btn reset"
             onClick={() => {
-              // reset to default centered view (animated)
-              animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
+              // reset to default centered view (20% zoom on Super Earth) - animated
+              animateViewBox({ x: -220, y: -220, w: 1240, h: 1240 }, 360)
             }}
             title="Reset Zoom"
           >
@@ -416,28 +468,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           </button>
         </div>
 
-        {/* Legend */}
-        <div className="map-legend">
-          <h4>📡 STATUS</h4>
-          <div className="legend-items">
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
-              <span>Liberated</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
-              <span>Terminids</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
-              <span>Automaton</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
-              <span>Illuminate</span>
-            </div>
-          </div>
-        </div>
         {/* Loading animation */}
         {isLoading && (
           <div className="loading-overlay">

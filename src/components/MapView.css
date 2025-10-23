@@ -9,6 +9,63 @@
   font-family: 'Courier New', monospace;
 }
 
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 179, 0, 0.2);
+}
+
+.map-header h2 {
+  font-size: 20px;
+  color: #ffb300;
+  margin: 0;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
+}
+
+.map-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.4);
+  color: #ffb300;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(255, 179, 0, 0.2);
+  border-color: rgba(255, 179, 0, 0.8);
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
+  transform: scale(1.05);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.last-refresh {
+  font-size: 10px;
+  color: rgba(255, 179, 0, 0.5);
+  margin: 0;
+  font-style: italic;
+  white-space: nowrap;
+}
+
 .map-container {
   flex: 1;
   position: relative;

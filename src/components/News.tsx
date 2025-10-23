@@ -152,111 +152,104 @@ const mapDispatchToNewsItem = (dispatch: any, idx: number): NewsItem => {
 
 const News: React.FC<NewsProps> = ({ warStatus }) => {
   const [news, setNews] = useState<NewsItem[]>([])
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [displayLimit, setDisplayLimit] = useState(5)
 
-  useEffect(() => {
-    // Fetch dispatches from API
-    const loadDispatches = async () => {
-      const newsItems: NewsItem[] = []
+  const loadDispatches = async () => {
+    setIsRefreshing(true)
+    const newsItems: NewsItem[] = []
 
-      try {
-        // Try to fetch from dispatches endpoint
-        const dispatchesData = await HighCommandAPI.getDispatches()
-        if (dispatchesData) {
-          let dispatches: any[] = []
-          
-          if (Array.isArray(dispatchesData)) {
-            dispatches = dispatchesData
-          } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
-            dispatches = dispatchesData.dispatches
-          }
-          
-          if (dispatches.length > 0) {
-            // Sort by date (newest first) and get latest 10
-            const sorted = dispatches.sort((a: any, b: any) => {
-              const dateA = new Date(parseTimestamp(a)).getTime()
-              const dateB = new Date(parseTimestamp(b)).getTime()
-              return dateB - dateA
-            }).slice(0, 10)
-            
-            const apiNews: NewsItem[] = sorted.map((dispatch: any, idx: number) =>
-              mapDispatchToNewsItem(dispatch, idx)
-            )
-            setNews(apiNews)
-            return
-          } else {
-            // No dispatches available
-            setNews([{
-              id: 'no-dispatches',
-              title: '📡 COMMAND STATUS',
-              content: 'No dispatches at this time.',
-              timestamp: new Date(),
-              priority: 'normal'
-            }])
-            return
-          }
+    try {
+      // Try to fetch from dispatches endpoint
+      const dispatchesData = await HighCommandAPI.getDispatches()
+      if (dispatchesData) {
+        let dispatches: any[] = []
+        
+        if (Array.isArray(dispatchesData)) {
+          dispatches = dispatchesData
+        } else if (dispatchesData.dispatches && Array.isArray(dispatchesData.dispatches)) {
+          dispatches = dispatchesData.dispatches
         }
-      } catch (error) {
-        console.error('Failed to load dispatches from API:', error)
-      }
-
-      // Fallback: Generate news from war status data with varied timestamps
-      if (warStatus) {
-        // War status update
-        newsItems.push({
-          id: '1',
-          title: 'ONGOING GALACTIC WAR STATUS',
-          content: `Total active personnel: ${warStatus.statistics?.playerCount?.toLocaleString()}. Continue spreading managed democracy.`,
-          timestamp: new Date(),
-          priority: 'normal'
-        })
-
-        // Victory announcement (1 hour ago)
-        if (warStatus.statistics?.missionsWon > warStatus.statistics?.missionsLost) {
-          newsItems.push({
-            id: '2',
-            title: '🏆 VICTORY IN SIGHT',
-            content: `With ${warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'} missions won versus ${warStatus.statistics?.missionsLost?.toLocaleString() || 'N/A'} lost, our forces maintain strategic superiority. Morale is at peak levels.`,
-            timestamp: new Date(Date.now() - 3600000),
-            priority: 'high'
-          })
-        }
-
-        // Enemy intel (3 hours ago)
-        const totalEnemyKills = (warStatus.statistics?.terminidKills || 0) + 
-                                (warStatus.statistics?.automatonKills || 0) + 
-                                (warStatus.statistics?.illuminateKills || 0)
-        if (totalEnemyKills > 0) {
-          newsItems.push({
-            id: '4',
-            title: '🎯 ENEMY ENGAGEMENT REPORT',
-            content: `${(totalEnemyKills / 1e9).toFixed(1)}B total enemy casualties across all sectors. Terminids remain the primary threat. Strategic doctrine: maintain firepower and advance democracy.`,
-            timestamp: new Date(Date.now() - 10800000),
+        
+        if (dispatches.length > 0) {
+          // Sort by date (newest first) and get latest 50
+          const sorted = dispatches.sort((a: any, b: any) => {
+            const dateA = new Date(parseTimestamp(a)).getTime()
+            const dateB = new Date(parseTimestamp(b)).getTime()
+            return dateB - dateA
+          }).slice(0, 50)
+          
+          const apiNews: NewsItem[] = sorted.map((dispatch: any, idx: number) =>
+            mapDispatchToNewsItem(dispatch, idx)
+          )
+          setNews(apiNews)
+          setLastRefresh(new Date())
+          setIsRefreshing(false)
+          return
+        } else {
+          // No dispatches available
+          setNews([{
+            id: 'no-dispatches',
+            title: '📡 COMMAND STATUS',
+            content: 'No dispatches at this time.',
+            timestamp: new Date(),
             priority: 'normal'
-          })
-        }
-
-        // Personnel casualty update (4 hours ago)
-        if (warStatus.statistics?.deaths) {
-          newsItems.push({
-            id: '5',
-            title: '⚠️ PERSONNEL STATUS UPDATE',
-            content: `Total personnel casualties: ${warStatus.statistics.deaths?.toLocaleString() || 'N/A'}. Revive count: ${warStatus.statistics.revives || 0}. These soldiers have made the ultimate sacrifice for democracy.`,
-            timestamp: new Date(Date.now() - 14400000),
-            priority: 'high'
-          })
+          }])
+          setLastRefresh(new Date())
+          setIsRefreshing(false)
+          return
         }
       }
-
-      setNews(newsItems)
+    } catch (error) {
+      console.error('Failed to load dispatches from API:', error)
     }
 
+    setNews(newsItems)
+    setLastRefresh(new Date())
+    setIsRefreshing(false)
+  }
+
+  // Auto-refresh every hour (3600000 ms)
+  useEffect(() => {
+    loadDispatches() // Load on mount
+    const interval = setInterval(loadDispatches, 3600000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Reload when warStatus changes
+  useEffect(() => {
     loadDispatches()
   }, [warStatus])
 
   return (
     <div className="news-container">
       <div className="news-header">
-        <h2>📡 COMMAND DISPATCHES</h2>
+        <div className="news-header-top">
+          <h2>📡 COMMAND DISPATCHES</h2>
+          <div className="news-header-right">
+            <p className="last-refresh">Last refreshed: {lastRefresh.toLocaleTimeString()}</p>
+            <button 
+              className="refresh-button" 
+              onClick={loadDispatches} 
+              disabled={isRefreshing}
+              title="Manually refresh dispatches"
+            >
+              {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
+            </button>
+            <select 
+              value={displayLimit} 
+              onChange={(e) => setDisplayLimit(Number(e.target.value))}
+              className="display-limit-select"
+              title="Display limit"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
         <p className="news-subheader">LATEST NEWS & ANNOUNCEMENTS</p>
       </div>
 
@@ -266,7 +259,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
             <p>No dispatches at this time.</p>
           </div>
         ) : (
-          news.map((item) => (
+          news.slice(0, displayLimit).map((item) => (
               <div key={item.id} className={`news-item priority-${item.priority}`}>
                 <div className="news-priority-indicator">
                   {item.priority === 'critical' && '🔴'}
