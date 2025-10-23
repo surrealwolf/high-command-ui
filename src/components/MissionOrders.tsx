@@ -14,7 +14,6 @@ interface Mission {
   tasks?: any[]
   reward?: { type: number; amount: number }
   expiration?: string
-  created?: string
   flags?: number
 }
 
@@ -70,7 +69,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
             tasks: order.tasks,
             reward: order.reward,
             expiration: order.expiration,
-            created: order.created || order.startTime,
             flags: order.flags
           }))
           setMissions(apiMissions)
@@ -328,11 +326,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                           {getOrderFailed(mission.progress, mission.expiration) && (
                             <span className="failed-badge"> ❌ FAILED</span>
                           )}
-                        </div>
-                      )}
-                      {mission.created && (
-                        <div className="detail-item">
-                          <strong>📅 Created:</strong> {formatExpiration(mission.created)}
                         </div>
                       )}
                     </div>
