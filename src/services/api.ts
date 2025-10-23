@@ -198,6 +198,48 @@ class HighCommandAPI {
       return null
     }
   }
+
+  async getMajorOrders() {
+    try {
+      const response = await fetch(`${this.baseUrl}/assignments`)
+      if (!response.ok) {
+        console.error(`Error fetching major orders: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching major orders:', error)
+      return null
+    }
+  }
+
+  async getDispatches() {
+    try {
+      const response = await fetch(`${this.baseUrl}/dispatches`)
+      if (!response.ok) {
+        console.error(`Error fetching dispatches: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching dispatches:', error)
+      return null
+    }
+  }
+
+  async getPlanetEvents() {
+    try {
+      const response = await fetch(`${this.baseUrl}/events`)
+      if (!response.ok) {
+        console.error(`Error fetching planet events: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching planet events:', error)
+      return null
+    }
+  }
 }
 
 export default new HighCommandAPI()

@@ -9,6 +9,12 @@ interface Mission {
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Extreme'
   priority: 'critical' | 'high' | 'normal'
   status: 'active' | 'available' | 'completed'
+  // Additional API details
+  progress?: number[]
+  tasks?: any[]
+  reward?: { type: number; amount: number }
+  expiration?: string
+  flags?: number
 }
 
 interface MissionOrdersProps {
@@ -17,21 +23,47 @@ interface MissionOrdersProps {
 
 const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   const [missions, setMissions] = useState<Mission[]>([])
-  const [planets, setPlanets] = useState<any[]>([])
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadMissions = async () => {
       try {
-        const planetsData = await HighCommandAPI.getPlanets()
-        if (planetsData && Array.isArray(planetsData)) {
-          setPlanets(planetsData.slice(0, 5))
+        // Fetch assignments from API (exposed as major orders endpoint)
+        const majorOrders = await HighCommandAPI.getMajorOrders()
+        if (majorOrders) {
+          // API returns array directly or wrapped in 'orders' property
+          let assignments: any[] = []
+          
+          if (Array.isArray(majorOrders)) {
+            assignments = majorOrders
+          } else if (majorOrders.orders && Array.isArray(majorOrders.orders)) {
+            assignments = majorOrders.orders
+          }
+          
+          if (assignments.length > 0) {
+            const apiMissions: Mission[] = assignments.map((order: any, idx: number) => ({
+              id: order.id || `${idx}`,
+              title: order.title || `MAJOR ORDER ${idx + 1}`,
+              objective: order.briefing || order.description || order.objective || 'Objective classified',
+              difficulty: order.difficulty || 'Medium',
+              priority: order.priority || (order.flags === 1 ? 'critical' : 'normal'),
+              status: order.status || 'active',
+              progress: order.progress,
+              tasks: order.tasks,
+              reward: order.reward,
+              expiration: order.expiration,
+              flags: order.flags
+            }))
+            setMissions(apiMissions)
+            return
+          }
         }
       } catch (error) {
-        console.error('Failed to load planets:', error)
+        console.error('Failed to load major orders:', error)
       }
-
-      // Generate mission orders
-      const missionList: Mission[] = [
+      
+      // Fallback: use default missions if API fails or no data
+      const defaultMissions: Mission[] = [
         {
           id: '1',
           title: 'OPERATION: LIBERATION DAWN',
@@ -47,128 +79,208 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
           difficulty: 'Extreme',
           priority: 'critical',
           status: 'active'
-        },
-        {
-          id: '3',
-          title: 'RECON MISSION: SECTOR 7',
-          objective: 'Scout enemy positions and gather intelligence. Avoid unnecessary engagement.',
-          difficulty: 'Medium',
-          priority: 'high',
-          status: 'available'
-        },
-        {
-          id: '4',
-          title: 'SUPPLY LINE CONTROL',
-          objective: 'Secure resource extraction zones. Neutralize opposing forces.',
-          difficulty: 'Medium',
-          priority: 'normal',
-          status: 'available'
-        },
-        {
-          id: '5',
-          title: 'STRATEGIC STRIKE: BUG NEST',
-          objective: 'Locate and destroy primary Terminid hive structure. High-risk operation.',
-          difficulty: 'Extreme',
-          priority: 'high',
-          status: 'available'
         }
       ]
-
-      setMissions(missionList)
+      setMissions(defaultMissions)
     }
 
     loadMissions()
   }, [warStatus])
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy':
-        return '#66ff00'
-      case 'Medium':
-        return '#ffff00'
-      case 'Hard':
-        return '#ff8800'
-      case 'Extreme':
-        return '#ff0000'
-      default:
-        return '#ffb300'
+  const formatExpiration = (expiration: string | undefined) => {
+    if (!expiration) return 'No expiration'
+    try {
+      const date = new Date(expiration)
+      return date.toLocaleString()
+    } catch {
+      return expiration
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return '🔴'
-      case 'available':
-        return '⚪'
-      case 'completed':
-        return '✅'
-      default:
-        return '❓'
+  const getRewardText = (reward: any) => {
+    if (!reward) return 'No reward'
+    // Type 1 is typically Super Credits or Medals
+    const typeLabel = reward.type === 1 ? '⭐ Medals' : `Type ${reward.type}`
+    return `${typeLabel}: ${reward.amount}`
+  }
+
+  const getOrderStatusEmoji = (progress: number[] | undefined) => {
+    if (!progress || progress.length === 0) return '⏳' // hourglass - no data
+
+    // Check if all objectives completed (progress values are 1)
+    const allCompleted = progress.every((p) => p === 1)
+    if (allCompleted) return '✅' // checkmark - all completed
+
+    // Check if any are in progress (have both 0 and 1)
+    const hasInProgress = progress.some((p) => p === 0)
+    if (hasInProgress) return '⚙️' // gear - in progress
+
+    return '⏳' // hourglass - waiting to start
+  }
+
+  const getOrderStatusEmojiWithFailed = (progress: number[] | undefined, expiration: string | undefined) => {
+    const isFailed = getOrderFailed(progress, expiration)
+    if (isFailed) return '❌' // failed
+    return getOrderStatusEmoji(progress)
+  }
+
+  const getOrderSuccessStatus = (progress: number[] | undefined) => {
+    if (!progress) return false
+    return progress.every((p) => p === 1)
+  }
+
+  const getTimeRemaining = (expiration: string | undefined) => {
+    if (!expiration) return { hours: 0, formatted: 'No deadline', status: 'normal' }
+    try {
+      const expiryTime = new Date(expiration).getTime()
+      const now = Date.now()
+      const ms = expiryTime - now
+
+      if (ms <= 0) {
+        return { hours: 0, formatted: 'EXPIRED', status: 'expired' }
+      }
+
+      const hours = Math.floor(ms / (1000 * 60 * 60))
+      const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+
+      let formatted = ''
+      if (hours > 0) formatted += `${hours}h`
+      if (mins > 0) formatted += ` ${mins}m`
+
+      const status = hours < 24 ? (hours < 1 ? 'urgent' : 'urgent') : 'normal'
+
+      return { hours, formatted, status }
+    } catch {
+      return { hours: 0, formatted: 'Unknown', status: 'normal' }
     }
+  }
+
+  const getMissionCardClass = (expiration: string | undefined) => {
+    const timeInfo = getTimeRemaining(expiration)
+    if (timeInfo.status === 'expired') return 'time-expired'
+    if (timeInfo.status === 'urgent') return 'time-urgent'
+    return 'time-normal'
+  }
+
+  const getOrderFailed = (progress: number[] | undefined, expiration: string | undefined) => {
+    if (!progress) return false
+    // Failed if expired AND not all objectives completed
+    const allCompleted = progress.every((p) => p === 1)
+    if (allCompleted) return false // Not failed if completed
+    
+    const timeInfo = getTimeRemaining(expiration)
+    return timeInfo.status === 'expired' // Failed if expired and not complete
+  }
+
+  const formatObjectivesDetailed = (progress: number[] | undefined) => {
+    if (!progress || progress.length === 0) return []
+    return progress.map((p, idx) => ({
+      number: idx + 1,
+      status: p === 1 ? 'Completed' : 'In Progress',
+      emoji: p === 1 ? '✅' : '⏳'
+    }))
+  }
+
+  const getPriorityBadge = (priority: string | undefined) => {
+    if (!priority) return null
+    const badges: { [key: string]: { emoji: string; label: string } } = {
+      critical: { emoji: '🔴', label: 'CRITICAL' },
+      high: { emoji: '🟠', label: 'HIGH' },
+      normal: { emoji: '🟡', label: 'NORMAL' }
+    }
+    return badges[priority] || null
   }
 
   return (
     <div className="mission-orders-container">
       <div className="mission-header">
         <h2>⭐ MAJOR ORDERS</h2>
-        <p className="mission-subheader">GALACTIC WAR CAMPAIGN DIRECTIVES</p>
+        <p className="mission-subheader">ACTIVE ASSIGNMENTS</p>
       </div>
 
       <div className="mission-sections">
         <div className="mission-briefing">
-          <h3>ACTIVE OPERATIONS</h3>
           <div className="missions-list">
             {missions
               .filter((m) => m.status === 'active')
               .map((mission) => (
-                <div key={mission.id} className={`mission-card status-${mission.status} priority-${mission.priority}`}>
+                <div
+                  key={mission.id}
+                  className={`mission-card status-${mission.status} priority-${mission.priority} ${
+                    expandedId === mission.id ? 'expanded' : ''
+                  } ${getMissionCardClass(mission.expiration)} ${
+                    getOrderFailed(mission.progress, mission.expiration) ? 'status-failed' : ''
+                  }`}
+                  onClick={() => setExpandedId(expandedId === mission.id ? null : mission.id)}
+                  role="button"
+                  tabIndex={0}
+                >
                   <div className="mission-header-row">
-                    <span className="mission-status-icon">{getStatusIcon(mission.status)}</span>
-                    <h4 className="mission-title">{mission.title}</h4>
-                    <span className="mission-difficulty" style={{ color: getDifficultyColor(mission.difficulty) }}>
-                      {mission.difficulty.toUpperCase()}
+                    <span
+                      className="mission-status-emoji"
+                      title={
+                        getOrderFailed(mission.progress, mission.expiration)
+                          ? 'Order Failed'
+                          : getOrderSuccessStatus(mission.progress)
+                          ? 'All objectives completed'
+                          : 'Objectives in progress'
+                      }
+                    >
+                      {getOrderStatusEmojiWithFailed(mission.progress, mission.expiration)}
                     </span>
+                    <h4 className="mission-title">{mission.title}</h4>
+                    <div className="mission-right-section">
+                      <span className="mission-time-counter">
+                        {getTimeRemaining(mission.expiration).formatted}
+                      </span>
+                      {getPriorityBadge(mission.priority) && (
+                        <span className={`priority-badge priority-${mission.priority}`}>
+                          {getPriorityBadge(mission.priority)?.emoji} {getPriorityBadge(mission.priority)?.label}
+                        </span>
+                      )}
+                    </div>
+                    <span className="mission-expand-icon">{expandedId === mission.id ? '▼' : '▶'}</span>
                   </div>
                   <p className="mission-objective">{mission.objective}</p>
+
+                  {expandedId === mission.id && (
+                    <div className="mission-details">
+                      {mission.reward && (
+                        <div className="detail-item">
+                          <strong>🎁 Reward:</strong> {getRewardText(mission.reward)}
+                        </div>
+                      )}
+                      {mission.progress && mission.progress.length > 0 && (
+                        <div className="detail-item objectives-list">
+                          <strong>📋 Objectives ({mission.progress.length}):</strong>
+                          <div className="objectives-items">
+                            {formatObjectivesDetailed(mission.progress).map((obj) => (
+                              <div key={obj.number} className="objective-item">
+                                {obj.number}. {obj.emoji} {obj.status}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {mission.expiration && (
+                        <div className="detail-item">
+                          <strong>⏰ Expires:</strong> {formatExpiration(mission.expiration)}
+                          {getOrderFailed(mission.progress, mission.expiration) && (
+                            <span className="failed-badge"> ❌ FAILED</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
+            {missions.filter((m) => m.status === 'active').length === 0 && (
+              <div className="no-missions">
+                <p>No active assignments at this time.</p>
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="mission-briefing">
-          <h3>AVAILABLE MISSIONS</h3>
-          <div className="missions-list">
-            {missions
-              .filter((m) => m.status === 'available')
-              .map((mission) => (
-                <div key={mission.id} className={`mission-card status-${mission.status} priority-${mission.priority}`}>
-                  <div className="mission-header-row">
-                    <span className="mission-status-icon">{getStatusIcon(mission.status)}</span>
-                    <h4 className="mission-title">{mission.title}</h4>
-                    <span className="mission-difficulty" style={{ color: getDifficultyColor(mission.difficulty) }}>
-                      {mission.difficulty.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="mission-objective">{mission.objective}</p>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        {planets.length > 0 && (
-          <div className="mission-briefing">
-            <h3>DEPLOYMENT ZONES</h3>
-            <div className="planets-grid">
-              {planets.map((planet, idx) => (
-                <div key={idx} className="planet-card">
-                  <div className="planet-name">{planet.name || `SECTOR ${idx + 1}`}</div>
-                  <div className="planet-biome">{planet.biome_name || 'CLASSIFIED'}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

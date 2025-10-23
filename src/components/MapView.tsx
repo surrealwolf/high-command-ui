@@ -2,6 +2,21 @@ import { useState, useEffect, useRef } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
 
+const SVG_CENTER = 2000
+
+interface Event {
+  id?: string
+  eventType?: number
+  faction?: string
+  health?: number
+  maxHealth?: number
+  startTime?: string
+  endTime?: string
+  campaignId?: string
+  jointOperationIds?: string[]
+  [key: string]: any
+}
+
 interface Planet {
   name: string
   index: number
@@ -9,7 +24,9 @@ interface Planet {
   health?: number
   maxHealth?: number
   currentOwner?: string
+  owner?: string
   biomeType?: string
+  event?: Event
   [key: string]: any
 }
 
@@ -23,11 +40,22 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
+  
+  // Generate stars once on component mount
+  const [stars] = useState(() => {
+    return [...Array(100)].map(() => ({
+      x: Math.random() * 1000,
+      y: Math.random() * 1000,
+      size: Math.random() * 1.5,
+      opacity: Math.random() * 0.6 + 0.4
+    }))
+  })
+  
   // viewBox state for SVG zoom/pan: x, y, width, height
-  // With 261 planets spread across ±750 from center (400, 400):
-  // - All planets fit in range roughly -350 to 1150 for both X and Y
-  // - Ultra-wide viewBox for maximum planet separation
-  const [viewBox, setViewBox] = useState({ x: -250, y: -250, w: 1300, h: 1300 })
+  // With planets spread across ±2000 from center (2000, 2000):
+  // - All planets fit in range roughly -2100 to 4100 for both X and Y
+  // - Massive viewBox for maximum planet separation
+  const [viewBox, setViewBox] = useState({ x: -2100, y: -2100, w: 6200, h: 6200 })
   const svgRef = useRef<SVGSVGElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const isPanning = useRef(false)
@@ -49,14 +77,14 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           console.log('API returned:', data.length, 'planets')
           
           if (data && Array.isArray(data) && data.length > 0) {
-            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 400, 400)
-            // Map -0.93 to -750 and 0.93 to 750, giving us range of ±750 around center (maximum spread)
+            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
+            // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
             // Invert Y axis so that positive Y values go up instead of down
             const scaledPlanets = data.map(planet => ({
               ...planet,
               position: planet.position ? {
-                x: (planet.position.x || 0) * 750,  // Scale from normalized [-0.93, 0.93] to [-750, 750]
-                y: -(planet.position.y || 0) * 750   // Negate Y so up is up
+                x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
+                y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
               } : undefined
             }))
             
@@ -69,8 +97,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             const scaledPlanets = data.planets.map((planet: Planet) => ({
               ...planet,
               position: planet.position ? {
-                x: (planet.position.x || 0) * 750,
-                y: -(planet.position.y || 0) * 750  // Negate Y so up is up
+                x: (planet.position.x || 0) * 2000,
+                y: -(planet.position.y || 0) * 2000  // Negate Y so up is up
               } : undefined
             }))
             console.log('Using scaled planets from data.planets:', scaledPlanets.length)
@@ -92,7 +120,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   // Rotate the star field slowly
   useEffect(() => {
     const interval = setInterval(() => {
-      setRotation(prev => (prev + 0.2) % 360)
+      setRotation(prev => (prev + 0.01) % 360)
     }, 50)
     return () => clearInterval(interval)
   }, [])
@@ -101,13 +129,13 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     // Use owner field directly for faction colors
     if (planet.owner === 'Humans') return 'liberated'
     if (planet.owner === 'Terminids') return 'under-siege'
-    if (planet.owner === 'Automatons') return 'contested-automaton'
+    if (planet.owner === 'Automaton' || planet.owner === 'Automatons') return 'contested-automaton'
     if (planet.owner === 'Illuminate') return 'contested-illuminate'
     
     // Fallback to currentOwner if owner not available
     if (planet.currentOwner === 'Humans') return 'liberated'
     if (planet.currentOwner === 'Terminids') return 'under-siege'
-    if (planet.currentOwner === 'Automatons') return 'contested-automaton'
+    if (planet.currentOwner === 'Automaton' || planet.currentOwner === 'Automatons') return 'contested-automaton'
     if (planet.currentOwner === 'Illuminate') return 'contested-illuminate'
     
     // Debug: log neutral planets to see their structure
@@ -142,6 +170,52 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
       neutral: 'NEUTRAL'
     }
     return labels[status] || 'UNKNOWN'
+  }
+
+  const getEventColor = (event: Event | null | undefined) => {
+    if (!event) return null
+    
+    // Map event factions to colors using object map
+    const factionColors: Record<string, string> = {
+      'Terminids': '#ff69b4',      // Hot pink for Terminids
+      'Automaton': '#ff1493',       // Deep pink for Automatons
+      'Automatons': '#ff1493',      // Deep pink for Automatons
+      'Illuminate': '#ff69b4'       // Hot pink for Illuminate
+    }
+    
+    const color = factionColors[event.faction ?? '']
+    if (!color) {
+      console.warn('Unknown event faction:', event.faction)
+      return '#ff69b4'  // Hot pink fallback
+    }
+    return color
+  }
+
+  const getFactionEmoji = (event: Event | null | undefined) => {
+    if (!event) return null
+    
+    // Map event factions to emojis using object map
+    const factionEmojis: Record<string, string> = {
+      'Terminids': '🐛',           // Bug for Terminids
+      'Automaton': '🤖',            // Robot for Automatons
+      'Automatons': '🤖',           // Robot for Automatons
+      'Illuminate': '👁️'           // Eye for Illuminate
+    }
+    
+    return factionEmojis[event.faction ?? ''] ?? '⚠️'
+  }
+
+  const getEventTypeEmoji = (event: Event | null | undefined) => {
+    if (!event) return null
+    
+    // Map event types to emojis using object map
+    const eventTypeEmojis: Record<number, string> = {
+      1: '⚔️',  // Swords for ATTACK
+      2: '🛡️',  // Shield for DEFENSE
+      3: '💣'   // Bomb for SABOTAGE
+    }
+    
+    return eventTypeEmojis[event.eventType ?? -1] ?? '⚠️'
   }
 
   // Calculate position based on actual position data or use optimal circular layout as fallback
@@ -296,52 +370,74 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   return (
     <div className="map-view">
-          {/* Zoom Controls (viewBox-based) */}
-          <div className="zoom-controls">
-            <button
-              className="zoom-btn"
-              onClick={() => {
-                // zoom out: increase viewBox size (animated)
-                const factor = 1.25
-                const newW = Math.min(4000, viewBox.w * factor)
-                const newH = Math.min(4000, viewBox.h * factor)
-                const nx = viewBox.x - (newW - viewBox.w) / 2
-                const ny = viewBox.y - (newH - viewBox.h) / 2
-                animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
-              }}
-              title="Zoom Out"
-            >
-              −
-            </button>
-            <span className="zoom-level">{Math.round((800 / viewBox.w) * 100)}%</span>
-            <button
-              className="zoom-btn"
-              onClick={() => {
-                // zoom in: decrease viewBox size (animated)
-                const factor = 1 / 1.25
-                const newW = Math.max(200, viewBox.w * factor)
-                const newH = Math.max(200, viewBox.h * factor)
-                const nx = viewBox.x + (viewBox.w - newW) / 2
-                const ny = viewBox.y + (viewBox.h - newH) / 2
-                animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 200)
-              }}
-              title="Zoom In"
-            >
-              +
-            </button>
-            <button
-              className="zoom-btn reset"
-              onClick={() => {
-                // reset to default centered view (animated)
-                animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
-              }}
-              title="Reset Zoom"
-            >
-              ⊙
-            </button>
-          </div>
-
       <div className="map-container" ref={containerRef}>
+        {/* Zoom Controls (viewBox-based) */}
+        <div className="zoom-controls">
+          <button
+            className="zoom-btn"
+            onClick={() => {
+              // zoom out: increase viewBox size (animated)
+              const factor = 1.25
+              const newW = Math.min(4000, viewBox.w * factor)
+              const newH = Math.min(4000, viewBox.h * factor)
+              const nx = viewBox.x - (newW - viewBox.w) / 2
+              const ny = viewBox.y - (newH - viewBox.h) / 2
+              animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
+            }}
+            title="Zoom Out"
+          >
+            −
+          </button>
+          <span className="zoom-level">{Math.round((800 / viewBox.w) * 100)}%</span>
+          <button
+            className="zoom-btn"
+            onClick={() => {
+              // zoom in: decrease viewBox size (animated)
+              const factor = 1 / 1.25
+              const newW = Math.max(200, viewBox.w * factor)
+              const newH = Math.max(200, viewBox.h * factor)
+              const nx = viewBox.x + (viewBox.w - newW) / 2
+              const ny = viewBox.y + (viewBox.h - newH) / 2
+              animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 200)
+            }}
+            title="Zoom In"
+          >
+            +
+          </button>
+          <button
+            className="zoom-btn reset"
+            onClick={() => {
+              // reset to default centered view (animated)
+              animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
+            }}
+            title="Reset Zoom"
+          >
+            ⊙
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div className="map-legend">
+          <h4>📡 STATUS</h4>
+          <div className="legend-items">
+            <div className="legend-item">
+              <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
+              <span>Liberated</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
+              <span>Terminids</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
+              <span>Automaton</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
+              <span>Illuminate</span>
+            </div>
+          </div>
+        </div>
         {/* Loading animation */}
         {isLoading && (
           <div className="loading-overlay">
@@ -359,21 +455,16 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             transform: `rotate(${rotation}deg)`
           }}
         >
-          {[...Array(100)].map((_, i) => {
-            const x = Math.random() * 1000
-            const y = Math.random() * 1000
-            const size = Math.random() * 1.5
-            return (
-              <circle
-                key={`star-${i}`}
-                cx={x}
-                cy={y}
-                r={size}
-                fill="#66ff00"
-                opacity={Math.random() * 0.6 + 0.4}
-              />
-            )
-          })}
+          {stars.map((star, i) => (
+            <circle
+              key={`star-${i}`}
+              cx={star.x}
+              cy={star.y}
+              r={star.size}
+              fill="#66ff00"
+              opacity={star.opacity}
+            />
+          ))}
         </svg>
 
         {/* SVG orbital paths */}
@@ -383,8 +474,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           <circle cx="400" cy="400" r="280" fill="none" stroke="rgba(255, 179, 0, 0.05)" strokeWidth="1" strokeDasharray="4,4" />
           <circle cx="400" cy="400" r="750" fill="none" stroke="rgba(255, 179, 0, 0.1)" strokeWidth="1.5" />
 
-          {/* Sector connecting lines - draw lines between planets in same sector */}
-          {planets && planets.length > 1 && (
+          {/* Sector connecting lines - draw lines between planets in same sector - HIDDEN */}
+          {false && planets && planets.length > 1 && (
             <g opacity="0.15">
               {Object.entries(sectorMap).map(([sector, sectorPlanets]: [string, any]) => 
                 sectorPlanets.length > 1 ? (
@@ -410,16 +501,18 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             </g>
           )}
 
-          {/* Debug: Coordinate crosshairs at Super Earth center */}
+          {/* Debug: Coordinate crosshairs at Super Earth center - HIDDEN */}
+          {false && (
           <g opacity="0.3" stroke="rgba(255, 179, 0, 0.5)" strokeWidth="1">
             <line x1="350" y1="400" x2="450" y2="400" />
             <line x1="400" y1="350" x2="400" y2="450" />
             <circle cx="400" cy="400" r="2" fill="rgba(255, 179, 0, 1)" />
             <text x="410" y="395" fill="rgba(255, 179, 0, 0.7)" fontSize="10">(400, 400)</text>
           </g>
+          )}
 
-          {/* Connection lines to Super Earth from far planets */}
-          {planets && (
+          {/* Connection lines to Super Earth from far planets - HIDDEN */}
+          {false && planets && (
             <g opacity="0.1">
               {planets.map((planet: Planet, idx: number) => {
                 const pos = getPlanetPosition(planet, idx, planets.length)
@@ -447,8 +540,17 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           {planets && planets.map((planet: Planet, idx: number) => {
             const pos = getPlanetPosition(planet, idx, planets.length)
             const status = getPlanetStatus(planet)
-            const color = getStatusColor(status)
+            // Use event color if planet has an event, otherwise use status color
+            const color = planet.event && getEventColor(planet.event) || getStatusColor(status)
             const isSelected = selectedPlanet?.index === planet.index
+            
+            // Determine stroke color: selected = yellow, normal = faint white
+            let strokeColor = 'rgba(255, 255, 255, 0.3)'
+            let strokeWidth = 1
+            if (isSelected) {
+              strokeColor = '#ffff00'  // Yellow for selected
+              strokeWidth = 3
+            }
 
             return (
               <g key={planet.index || idx}>
@@ -468,11 +570,11 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   cy={400 + pos.y}
                   r={isSelected ? 18 : 16}
                   fill={color}
-                  stroke={isSelected ? '#ffff00' : 'rgba(255, 255, 255, 0.3)'}
-                  strokeWidth={isSelected ? 3 : 1}
+                  stroke={strokeColor}
+                  strokeWidth={strokeWidth}
                   style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
                   onClick={() => setSelectedPlanet(planet)}
-                  className={isSelected ? 'planet-selected' : ''}
+                  className={`${isSelected ? 'planet-selected' : ''} ${planet.event ? 'planet-event' : ''}`}
                 />
 
                 {/* Planet label */}
@@ -490,14 +592,48 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 >
                   {planet.name}
                 </text>
+
+                {/* Event emoji indicator - faction (top left) */}
+                {planet.event && (
+                  <text
+                    x={SVG_CENTER + pos.x - 20}
+                    y={SVG_CENTER + pos.y - 20}
+                    textAnchor="middle"
+                    fontSize="16"
+                    className="planet-event-emoji"
+                    style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                  >
+                    {getFactionEmoji(planet.event)}
+                  </text>
+                )}
+
+                {/* Event emoji indicator - event type (top right) */}
+                {planet.event && (
+                  <text
+                    x={SVG_CENTER + pos.x + 20}
+                    y={SVG_CENTER + pos.y - 20}
+                    textAnchor="middle"
+                    fontSize="16"
+                    className="planet-event-emoji"
+                    style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                  >
+                    {getEventTypeEmoji(planet.event)}
+                  </text>
+                )}
               </g>
             )
           })}
         </svg>
       </div>
 
-      {/* Planet details panel */}
-      <div className="map-details">
+      {/* Planet details panel - popup */}
+      <div 
+        className={`map-details ${selectedPlanet ? 'active' : ''}`}
+        style={selectedPlanet ? {
+          left: `${(window.innerWidth / 2) + 100}px`,
+          top: `${(window.innerHeight / 2) - 100}px`
+        } : {}}
+      >
         {selectedPlanet ? (
           <div className="planet-details">
             <div className="details-header">
@@ -591,6 +727,53 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 </div>
               )}
 
+              {/* Display active event if present */}
+              {selectedPlanet.event && (
+                <div className="detail-row event-info">
+                  <span className="detail-label">🔴 ACTIVE EVENT:</span>
+                  <div className="event-details">
+                    <div className="event-detail">
+                      <span className="event-label">FACTION:</span>
+                      <span className="event-value">{selectedPlanet.event.faction}</span>
+                    </div>
+                    <div className="event-detail">
+                      <span className="event-label">TYPE:</span>
+                      <span className="event-value">
+                        {selectedPlanet.event.eventType === 1 ? 'ATTACK' : 
+                         selectedPlanet.event.eventType === 2 ? 'DEFENSE' :
+                         selectedPlanet.event.eventType === 3 ? 'SABOTAGE' :
+                         `TYPE ${selectedPlanet.event.eventType}`}
+                      </span>
+                    </div>
+                    {selectedPlanet.event.health !== undefined && selectedPlanet.event.maxHealth && (
+                      <div className="event-detail">
+                        <span className="event-label">PROGRESS:</span>
+                        <div className="event-health-bar">
+                          <div
+                            className="event-health-fill"
+                            style={{
+                              width: `${(selectedPlanet.event.health / selectedPlanet.event.maxHealth) * 100}%`,
+                              backgroundColor: getEventColor(selectedPlanet.event) || '#ff00ff'
+                            }}
+                          ></div>
+                        </div>
+                        <span className="event-value">
+                          {selectedPlanet.event.health.toLocaleString()} / {selectedPlanet.event.maxHealth.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {selectedPlanet.event.endTime && (
+                      <div className="event-detail">
+                        <span className="event-label">ENDS:</span>
+                        <span className="event-value">
+                          {new Date(selectedPlanet.event.endTime).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {selectedPlanet.threatLevel && (
                 <div className="detail-row">
                   <span className="detail-label">THREAT LEVEL:</span>
@@ -605,29 +788,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             <p>Click on any planet to view its details</p>
           </div>
         )}
-      </div>
-
-      {/* Legend */}
-      <div className="map-legend">
-        <h4>📡 STATUS LEGEND</h4>
-        <div className="legend-items">
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
-            <span>Liberated</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
-            <span>Terminids</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
-            <span>Automaton</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
-            <span>Illuminate</span>
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -35,7 +35,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [warStatus, setWarStatus] = useState<WarStatus | null>(null)
   const [dailyQuote, setDailyQuote] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<'chat' | 'galactic' | 'news' | 'major' | 'help'>('chat')
+  const [activeTab, setActiveTab] = useState<'console' | 'major' | 'news' | 'galactic' | 'help'>('console')
   const [isApiAvailable, setIsApiAvailable] = useState(true)  // Track API availability
   const [upstreamApiDegraded, setUpstreamApiDegraded] = useState(false)  // Track upstream API status
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -158,14 +158,6 @@ function App() {
           {warStatus ? (
             <>
               <div className="stat-item">
-                <span className="stat-label">MISSIONS WON</span>
-                <span className="stat-value">{warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">SUCCESS RATE</span>
-                <span className="stat-value">{warStatus.statistics?.missionSuccessRate || 'N/A'}%</span>
-              </div>
-              <div className="stat-item">
                 <span className="stat-label">ACTIVE PLAYERS</span>
                 <span className="stat-value">{warStatus.statistics?.playerCount?.toLocaleString() || 'N/A'}</span>
               </div>
@@ -181,6 +173,10 @@ function App() {
                 <span className="stat-label">ILLUMINATE KILLS</span>
                 <span className="stat-value">{(warStatus.statistics?.illuminateKills ? Math.floor(warStatus.statistics.illuminateKills / 1e9) : 0)}B</span>
               </div>
+              <div className="stat-item">
+                <span className="stat-label">MISSIONS WON</span>
+                <span className="stat-value">{warStatus.statistics?.missionsWon?.toLocaleString() || 'N/A'}</span>
+              </div>
               {warStatus?.statistics?.factionStats && Object.entries(warStatus.statistics.factionStats).map(([faction, data]: [string, any]) => (
                 <div key={faction} className="stat-item faction-item">
                   <span className="stat-label">{faction.toUpperCase().substring(0, 8)}</span>
@@ -188,10 +184,6 @@ function App() {
                   <span className="stat-sublabel">Faction Kills</span>
                 </div>
               ))}
-              <div className="stat-item">
-                <span className="stat-label">IMPACT</span>
-                <span className="stat-value">{(warStatus.impactMultiplier * 100).toFixed(2)}%</span>
-              </div>
             </>
           ) : (
             <div className="stat-item offline-notice">
@@ -217,22 +209,10 @@ function App() {
       <div className="main-container">
         <nav className="tabs">
           <button 
-            className={`tab ${activeTab === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveTab('chat')}
+            className={`tab ${activeTab === 'console' ? 'active' : ''}`}
+            onClick={() => setActiveTab('console')}
           >
-            🎙️ TACTICAL PROMPT
-          </button>
-          <button 
-            className={`tab ${activeTab === 'galactic' ? 'active' : ''}`}
-            onClick={() => setActiveTab('galactic')}
-          >
-            🌍 GALACTIC MAP
-          </button>
-          <button 
-            className={`tab ${activeTab === 'news' ? 'active' : ''}`}
-            onClick={() => setActiveTab('news')}
-          >
-            📡 NEWS BRIEFINGS
+            💻 DATA CONSOLE
           </button>
           <button 
             className={`tab ${activeTab === 'major' ? 'active' : ''}`}
@@ -241,32 +221,44 @@ function App() {
             ⭐ MAJOR ORDERS
           </button>
           <button 
+            className={`tab ${activeTab === 'news' ? 'active' : ''}`}
+            onClick={() => setActiveTab('news')}
+          >
+            📡 DISPATCHES
+          </button>
+          <button 
+            className={`tab ${activeTab === 'galactic' ? 'active' : ''}`}
+            onClick={() => setActiveTab('galactic')}
+          >
+            🌍 GALACTIC MAP
+          </button>
+          <button 
             className={`tab ${activeTab === 'help' ? 'active' : ''}`}
             onClick={() => setActiveTab('help')}
           >
-            ❓ TACTICAL COMMAND
+            ❓ HELP
           </button>
         </nav>
 
         <div className="content">
-          {activeTab === 'chat' ? (
+          {activeTab === 'console' ? (
             <ChatInterface 
               messages={messages}
               loading={loading}
               onSendMessage={handleSendMessage}
               messagesEndRef={messagesEndRef}
             />
-          ) : activeTab === 'galactic' ? (
-            <GalacticMap warStatus={warStatus} />
-          ) : activeTab === 'news' ? (
-            <News warStatus={warStatus} />
           ) : activeTab === 'major' ? (
             <MissionOrders warStatus={warStatus} />
+          ) : activeTab === 'news' ? (
+            <News warStatus={warStatus} />
+          ) : activeTab === 'galactic' ? (
+            <GalacticMap warStatus={warStatus} />
           ) : (
             <div className="help-content">
               <div className="help-section">
-                <h2>🎙️ TACTICAL PROMPT INTERFACE</h2>
-                <p>Command the strategic warfare using the tactical prompt. Input natural language commands and our AI democracy officer will execute MCP tools to gather intelligence and execute operations.</p>
+                <h2>💻 DATA CONSOLE</h2>
+                <p>Command the strategic warfare using the Data Console. Input natural language commands and our AI democracy officer will execute MCP tools to gather intelligence and execute operations.</p>
                 
                 <h3>Available Commands:</h3>
                 <ul>

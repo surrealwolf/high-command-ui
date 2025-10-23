@@ -113,27 +113,33 @@
 }
 
 .mission-card.status-active {
-  border-left-color: #ff0000;
-  animation: missionPulse 2s ease-in-out infinite;
+  border-left-color: #ffb300;
 }
 
 .mission-card.status-active:hover {
   border-left-color: #66ff00;
 }
 
-.mission-card.priority-critical {
-  border-top: 2px solid #ff0000;
-  background: linear-gradient(135deg, rgba(40, 0, 0, 0.3) 0%, rgba(20, 0, 0, 0.2) 100%);
+/* Time-based box coloring */
+.mission-card.time-normal {
+  background: linear-gradient(135deg, rgba(20, 40, 20, 0.4) 0%, rgba(10, 20, 10, 0.3) 100%);
+  border-left: 4px solid #66ff00;
 }
 
-.mission-card.priority-high {
-  border-top: 2px solid #ff8800;
-  background: linear-gradient(135deg, rgba(40, 20, 0, 0.3) 0%, rgba(20, 10, 0, 0.2) 100%);
+.mission-card.time-urgent {
+  background: linear-gradient(135deg, rgba(30, 30, 15, 0.5) 0%, rgba(15, 15, 8, 0.4) 100%);
+  border-left: 4px solid #ffff00;
 }
 
-.mission-card.priority-normal {
-  border-top: 2px solid #ffff00;
-  background: linear-gradient(135deg, rgba(40, 40, 0, 0.3) 0%, rgba(20, 20, 0, 0.2) 100%);
+.mission-card.time-expired {
+  background: linear-gradient(135deg, rgba(30, 30, 15, 0.5) 0%, rgba(15, 15, 8, 0.4) 100%);
+  border-left: 4px solid #ffff00;
+}
+
+/* Failed status */
+.mission-card.status-failed {
+  background: linear-gradient(135deg, rgba(40, 20, 20, 0.5) 0%, rgba(20, 10, 10, 0.4) 100%);
+  border-left: 4px solid #ff6b6b;
 }
 
 @keyframes missionPulse {
@@ -196,6 +202,40 @@
   margin: 0;
   text-shadow: 0 0 5px rgba(255, 255, 0, 0.3);
   letter-spacing: 1px;
+}
+
+.mission-right-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.priority-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.priority-badge.priority-critical {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.priority-badge.priority-high {
+  background: rgba(255, 136, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 136, 0, 0.3);
+}
+
+.priority-badge.priority-normal {
+  background: rgba(255, 255, 0, 0.1);
+  color: #ffff00;
+  border: 1px solid rgba(255, 255, 0, 0.2);
 }
 
 .mission-difficulty {
@@ -291,4 +331,101 @@
   .mission-objective {
     font-size: 10px;
   }
+}
+
+/* Expandable mission details */
+.mission-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mission-status-emoji {
+  font-size: 18px;
+  min-width: 24px;
+  text-align: center;
+  cursor: help;
+}
+
+.mission-time-counter {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  text-align: center;
+  min-width: 60px;
+  color: #ffb300;
+}
+
+.mission-expand-icon {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  font-size: 12px;
+  color: rgba(255, 179, 0, 0.6);
+}
+
+.mission-card.expanded .mission-expand-icon {
+  transform: rotate(0deg);
+}
+
+.mission-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 179, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-item {
+  font-size: 12px;
+  color: rgba(255, 179, 0, 0.8);
+  line-height: 1.4;
+}
+
+.detail-item strong {
+  color: #ffb300;
+  font-weight: bold;
+}
+
+.objectives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.objectives-list strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.objectives-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(255, 179, 0, 0.3);
+}
+
+.objective-item {
+  font-size: 11px;
+  color: rgba(255, 179, 0, 0.7);
+}
+
+.failed-badge {
+  color: #ff6b6b;
+  font-weight: bold;
+  margin-left: 8px;
 }
