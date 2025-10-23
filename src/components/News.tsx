@@ -23,6 +23,21 @@ const parseTimestamp = (obj: any): Date => {
   return new Date()
 }
 
+// Helper function to render colored text with line breaks
+const renderColoredText = (text: string, color: string, key: { current: number }): JSX.Element => {
+  const lines = text.split('\n')
+  return (
+    <span key={key.current++} style={{ color }}>
+      {lines.map((line, idx) => (
+        <span key={idx}>
+          {line}
+          {idx < lines.length - 1 && <br />}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 // Helper function to parse custom HTML tags in dispatch messages
 const parseDispatchMessage = (message: string): JSX.Element => {
   // Custom tags: <i=0>...</i> = gray, <i=1>...</i> = yellow/emphasis, <i=3>...</i> = cyan/critical
@@ -36,7 +51,7 @@ const parseDispatchMessage = (message: string): JSX.Element => {
   let colorStack: string[] = ['inherit']
   let result: (string | JSX.Element)[] = []
   let currentText = ''
-  let key = 0
+  const keyCounter = { current: 0 }
 
   // Process message character by character, handling tags
   const regex = /<i=(\d+)>|<\/i>/g
@@ -55,35 +70,17 @@ const parseDispatchMessage = (message: string): JSX.Element => {
       // Closing tag - render accumulated text with current color, then pop color
       if (currentText) {
         const color = colorStack[colorStack.length - 1]
-        const lines = currentText.split('\n')
-        result.push(
-          <span key={key++} style={{ color }}>
-            {lines.map((line, idx) => (
-              <span key={idx}>
-                {line}
-                {idx < lines.length - 1 && <br />}
-              </span>
-            ))}
-          </span>
-        )
+        result.push(renderColoredText(currentText, color, keyCounter))
         currentText = ''
       }
-      colorStack.pop()
+      if (colorStack.length > 1) {
+        colorStack.pop()
+      }
     } else {
       // Opening tag - render any accumulated text first, then push new color
       if (currentText) {
         const color = colorStack[colorStack.length - 1]
-        const lines = currentText.split('\n')
-        result.push(
-          <span key={key++} style={{ color }}>
-            {lines.map((line, idx) => (
-              <span key={idx}>
-                {line}
-                {idx < lines.length - 1 && <br />}
-              </span>
-            ))}
-          </span>
-        )
+        result.push(renderColoredText(currentText, color, keyCounter))
         currentText = ''
       }
       const tagNum = match[1]
@@ -99,17 +96,7 @@ const parseDispatchMessage = (message: string): JSX.Element => {
   }
   if (currentText) {
     const color = colorStack[colorStack.length - 1]
-    const lines = currentText.split('\n')
-    result.push(
-      <span key={key++} style={{ color }}>
-        {lines.map((line, idx) => (
-          <span key={idx}>
-            {line}
-            {idx < lines.length - 1 && <br />}
-          </span>
-        ))}
-      </span>
-    )
+    result.push(renderColoredText(currentText, color, keyCounter))
   }
 
   return <>{result}</>

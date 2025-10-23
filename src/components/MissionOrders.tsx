@@ -147,7 +147,7 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
       if (hours > 0) formatted += `${hours}h`
       if (mins > 0) formatted += ` ${mins}m`
 
-      const status = hours < 24 ? (hours < 1 ? 'expired' : 'urgent') : 'normal'
+      const status = hours < 24 ? (hours < 1 ? 'urgent' : 'urgent') : 'normal'
 
       return { hours, formatted, status }
     } catch {

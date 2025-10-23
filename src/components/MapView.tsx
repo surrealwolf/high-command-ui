@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
 
+const SVG_CENTER = 2000
+
 interface Event {
   id?: string
   eventType?: number
@@ -539,7 +541,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             const pos = getPlanetPosition(planet, idx, planets.length)
             const status = getPlanetStatus(planet)
             // Use event color if planet has an event, otherwise use status color
-            const color = planet.event ? getEventColor(planet.event) || getStatusColor(status) : getStatusColor(status)
+            const color = planet.event && getEventColor(planet.event) || getStatusColor(status)
             const isSelected = selectedPlanet?.index === planet.index
             
             // Determine stroke color: selected = yellow, normal = faint white
@@ -594,8 +596,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - faction (top left) */}
                 {planet.event && (
                   <text
-                    x={2000 + pos.x - 20}
-                    y={2000 + pos.y - 20}
+                    x={SVG_CENTER + pos.x - 20}
+                    y={SVG_CENTER + pos.y - 20}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -608,8 +610,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - event type (top right) */}
                 {planet.event && (
                   <text
-                    x={2000 + pos.x + 20}
-                    y={2000 + pos.y - 20}
+                    x={SVG_CENTER + pos.x + 20}
+                    y={SVG_CENTER + pos.y - 20}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
