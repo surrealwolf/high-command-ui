@@ -56,8 +56,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   // viewBox state for SVG zoom/pan: x, y, width, height
   // With planets spread across ±2000 from center (2000, 2000):
   // - All planets fit in range roughly -2100 to 4100 for both X and Y
-  // - Default: 20% zoom centered on Super Earth at (400, 400)
-  const [viewBox, setViewBox] = useState({ x: -220, y: -220, w: 1240, h: 1240 })
+  // - Massive viewBox for maximum planet separation
+  const [viewBox, setViewBox] = useState({ x: -2100, y: -2100, w: 6200, h: 6200 })
   const svgRef = useRef<SVGSVGElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const isPanning = useRef(false)
@@ -430,8 +430,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
             onClick={() => {
               // zoom out: increase viewBox size (animated)
               const factor = 1.25
-              const newW = Math.min(6200, viewBox.w * factor)
-              const newH = Math.min(6200, viewBox.h * factor)
+              const newW = Math.min(4000, viewBox.w * factor)
+              const newH = Math.min(4000, viewBox.h * factor)
               const nx = viewBox.x - (newW - viewBox.w) / 2
               const ny = viewBox.y - (newH - viewBox.h) / 2
               animateViewBox({ x: nx, y: ny, w: newW, h: newH }, 260)
@@ -459,8 +459,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           <button
             className="zoom-btn reset"
             onClick={() => {
-              // reset to default centered view (20% zoom on Super Earth) - animated
-              animateViewBox({ x: -220, y: -220, w: 1240, h: 1240 }, 360)
+              // reset to default centered view (animated)
+              animateViewBox({ x: -250, y: -250, w: 1300, h: 1300 }, 360)
             }}
             title="Reset Zoom"
           >
