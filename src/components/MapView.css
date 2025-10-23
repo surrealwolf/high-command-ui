@@ -185,8 +185,22 @@
 }
 
 .planet-event-emoji {
-  /* Static emoji display - no animation */
+  /* Animated emoji display: 2s pulse (20pt → 24pt), opacity pulse */
   pointer-events: none;
+  font-size: 20pt;
+  animation: emoji-pulse 2s infinite;
+  transition: font-size 0.2s, opacity 0.2s;
+}
+
+@keyframes emoji-pulse {
+  0%, 100% {
+    font-size: 20pt;
+    opacity: 0.7;
+  }
+  50% {
+    font-size: 24pt;
+    opacity: 1;
+  }
 }
 
 .map-details {

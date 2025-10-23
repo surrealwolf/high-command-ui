@@ -279,9 +279,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
             <p>No dispatches at this time.</p>
           </div>
         ) : (
-          news
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-            .map((item) => (
+          news.map((item) => (
               <div key={item.id} className={`news-item priority-${item.priority}`}>
                 <div className="news-priority-indicator">
                   {item.priority === 'critical' && '🔴'}

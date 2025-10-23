@@ -36,10 +36,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   
   const [planets, setPlanets] = useState<Planet[]>([])  // Start empty, show loading animation
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
-  const [_selectedSector, _setSelectedSector] = useState<string | null>(null)
-  // TODO: _selectedSector and _setSelectedSector will be used for sector-based features
-  void _selectedSector
-  void _setSelectedSector
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
   
@@ -176,31 +172,48 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   const getEventColor = (event: Event | null | undefined) => {
     if (!event) return null
-    // Map event faction to pink color (all events use pink)
-    if (event.faction === 'Terminids') return '#ff69b4'  // Hot pink for Terminids
-    if (event.faction === 'Automaton' || event.faction === 'Automatons') return '#ff1493'  // Deep pink for Automatons
-    if (event.faction === 'Illuminate') return '#ff69b4'  // Hot pink for Illuminate
-    // Debug unknown faction
-    console.warn('Unknown event faction:', event.faction)
-    return '#ff69b4'  // Hot pink for unknown
+    
+    // Map event factions to colors using object map
+    const factionColors: Record<string, string> = {
+      'Terminids': '#ff69b4',      // Hot pink for Terminids
+      'Automaton': '#ff1493',       // Deep pink for Automatons
+      'Automatons': '#ff1493',      // Deep pink for Automatons
+      'Illuminate': '#ff69b4'       // Hot pink for Illuminate
+    }
+    
+    const color = factionColors[event.faction ?? '']
+    if (!color) {
+      console.warn('Unknown event faction:', event.faction)
+      return '#ff69b4'  // Hot pink fallback
+    }
+    return color
   }
 
   const getFactionEmoji = (event: Event | null | undefined) => {
     if (!event) return null
-    // Map event faction to emoji
-    if (event.faction === 'Terminids') return '🐛'  // Bug for Terminids
-    if (event.faction === 'Automaton' || event.faction === 'Automatons') return '🤖'  // Robot for Automatons
-    if (event.faction === 'Illuminate') return '👁️'  // Eye for Illuminate
-    return '⚠️'  // Warning for unknown
+    
+    // Map event factions to emojis using object map
+    const factionEmojis: Record<string, string> = {
+      'Terminids': '🐛',           // Bug for Terminids
+      'Automaton': '🤖',            // Robot for Automatons
+      'Automatons': '🤖',           // Robot for Automatons
+      'Illuminate': '👁️'           // Eye for Illuminate
+    }
+    
+    return factionEmojis[event.faction ?? ''] ?? '⚠️'
   }
 
   const getEventTypeEmoji = (event: Event | null | undefined) => {
     if (!event) return null
-    // Map event type to emoji
-    if (event.eventType === 1) return '⚔️'  // Swords for ATTACK
-    if (event.eventType === 2) return '🛡️'  // Shield for DEFENSE
-    if (event.eventType === 3) return '💣'  // Bomb for SABOTAGE
-    return '⚠️'  // Warning for unknown
+    
+    // Map event types to emojis using object map
+    const eventTypeEmojis: Record<number, string> = {
+      1: '⚔️',  // Swords for ATTACK
+      2: '🛡️',  // Shield for DEFENSE
+      3: '💣'   // Bomb for SABOTAGE
+    }
+    
+    return eventTypeEmojis[event.eventType ?? -1] ?? '⚠️'
   }
 
   // Calculate position based on actual position data or use optimal circular layout as fallback
@@ -256,38 +269,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   }
 
   const sectorMap = getSectorInfo()
-
-  // Calculate sector grid layout positions
-  const getSectorLayout = () => {
-    const sectors = Object.keys(sectorMap)
-    const sectorCount = sectors.length
-    const gridSize = Math.ceil(Math.sqrt(sectorCount))
-    const sectorSpacing = 2400 // Space between sector centers
-    const baseX = 2000
-    const baseY = 2000
-
-    const layout: { [key: string]: { x: number; y: number } } = {}
-    
-    sectors.forEach((sector, index) => {
-      const row = Math.floor(index / gridSize)
-      const col = index % gridSize
-      
-      // Center grid around (2000, 2000)
-      const offsetX = (col - (gridSize - 1) / 2) * sectorSpacing
-      const offsetY = (row - (gridSize - 1) / 2) * sectorSpacing
-      
-      layout[sector] = {
-        x: baseX + offsetX,
-        y: baseY + offsetY
-      }
-    })
-    
-    return layout
-  }
-
-  const _sectorLayout = getSectorLayout()
-  // TODO: These will be used for sector grid rendering and zoom-to-sector features
-  void _sectorLayout
 
   // Smoothly animate viewBox from current to target over duration (ms)
   const animateViewBox = (target: { x: number; y: number; w: number; h: number }, duration = 300) => {
@@ -613,8 +594,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - faction (top left) */}
                 {planet.event && (
                   <text
-                    x={400 + pos.x - 20}
-                    y={400 + pos.y - 20}
+                    x={2000 + pos.x - 20}
+                    y={2000 + pos.y - 20}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -627,8 +608,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - event type (top right) */}
                 {planet.event && (
                   <text
-                    x={400 + pos.x + 20}
-                    y={400 + pos.y - 20}
+                    x={2000 + pos.x + 20}
+                    y={2000 + pos.y - 20}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
