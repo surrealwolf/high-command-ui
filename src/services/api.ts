@@ -215,7 +215,7 @@ class HighCommandAPI {
 
   async getDispatches() {
     try {
-      const response = await fetch(`${this.baseUrl}/dispatches`)
+      const response = await fetch(`${this.baseUrl}/dispatches?limit=50`)
       if (!response.ok) {
         console.error(`Error fetching dispatches: HTTP ${response.status}`)
         return null
