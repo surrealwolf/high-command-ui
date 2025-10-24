@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
 
-const SVG_CENTER = 2000
-
 interface Event {
   id?: string
   eventType?: number
@@ -626,8 +624,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - faction (top left) */}
                 {planet.event && (
                   <text
-                    x={SVG_CENTER + pos.x - 20}
-                    y={SVG_CENTER + pos.y - 20}
+                    x={400 + pos.x - 35}
+                    y={400 + pos.y - 35}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -640,8 +638,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - event type (top right) */}
                 {planet.event && (
                   <text
-                    x={SVG_CENTER + pos.x + 20}
-                    y={SVG_CENTER + pos.y - 20}
+                    x={400 + pos.x + 35}
+                    y={400 + pos.y - 35}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -762,6 +760,12 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 <div className="detail-row event-info">
                   <span className="detail-label">🔴 ACTIVE EVENT:</span>
                   <div className="event-details">
+                    {selectedPlanet.event.id && (
+                      <div className="event-detail">
+                        <span className="event-label">MISSION CODE:</span>
+                        <span className="event-value">{selectedPlanet.event.id}</span>
+                      </div>
+                    )}
                     <div className="event-detail">
                       <span className="event-label">FACTION:</span>
                       <span className="event-value">{selectedPlanet.event.faction}</span>
