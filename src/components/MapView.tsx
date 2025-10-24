@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
 
@@ -63,15 +63,11 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const animRef = useRef<number | null>(null)
 
   // Fetch planets from API on mount
-  const loadPlanets = async () => {
+  const loadPlanets = useCallback(async () => {
     setIsRefreshing(true)
-    console.log('🔄 Loading planets...')
-    console.log('warStatus?.planets exists:', !!warStatus?.planets)
-    console.log('warStatus?.planets length:', warStatus?.planets?.length || 0)
     
     if (warStatus?.planets && warStatus.planets.length > 0) {
       // Use warStatus planets if available
-      console.log('✅ Setting planets from warStatus:', warStatus.planets.length)
       setPlanets(warStatus.planets)
       setLastRefresh(new Date())
       setIsRefreshing(false)
@@ -79,13 +75,10 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     }
     
     // Try to fetch from planets API endpoint
-    console.log('🌍 Fetching planets from API...')
     try {
       const data = await HighCommandAPI.getPlanets()
-      console.log('📡 API response:', data)
       
       if (!data) {
-        console.warn('⚠️ API returned null/undefined')
         setIsLoading(false)
         setIsRefreshing(false)
         return
@@ -95,22 +88,17 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
       
       // Check if data is directly an array
       if (Array.isArray(data)) {
-        console.log('✅ Data is array with', data.length, 'planets')
         planetsArray = data
       } 
       // Check if data has planets property
       else if (data?.planets && Array.isArray(data.planets)) {
-        console.log('✅ Data has .planets property with', data.planets.length, 'planets')
         planetsArray = data.planets
       }
       // Check if data has other array properties
       else if (data?.result && Array.isArray(data.result)) {
-        console.log('✅ Data has .result property with', data.result.length, 'planets')
         planetsArray = data.result
       }
       else {
-        console.warn('⚠️ API data structure not recognized:', Object.keys(data || {}))
-        console.log('Full response:', data)
         setIsLoading(false)
         setIsRefreshing(false)
         return
@@ -128,30 +116,27 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           } : undefined
         }))
         
-        console.log('✅ Scaled', scaledPlanets.length, 'planets')
-        console.log('Sample planets:', scaledPlanets.slice(0, 2).map(p => ({ name: p.name, index: p.index, pos: p.position })))
         setPlanets(scaledPlanets)
         setIsLoading(false)
         setLastRefresh(new Date())
         setIsRefreshing(false)
       } else {
-        console.warn('⚠️ Planets array is empty')
         setIsLoading(false)
         setIsRefreshing(false)
       }
     } catch (error) {
-      console.error('❌ Failed to fetch planets:', error)
+      console.error('Failed to fetch planets:', error)
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [warStatus?.planets])
 
   useEffect(() => {
     loadPlanets()
     // Auto-refresh every hour (3600000 ms)
     const interval = setInterval(loadPlanets, 3600000)
     return () => clearInterval(interval)
-  }, [warStatus])
+  }, [loadPlanets])
 
   // Rotate the star field slowly
   useEffect(() => {

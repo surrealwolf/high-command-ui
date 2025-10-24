@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import HighCommandAPI from '../services/api'
 import './MissionOrders.css'
 
@@ -37,11 +37,7 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    console.log('🎯 Mission filter state:', { showActiveOnly, totalMissions: missions.length, activeMissions: missions.filter(m => m.status === 'active').length })
-  }, [showActiveOnly, missions])
-
-  const loadMissions = async () => {
+  const loadMissions = useCallback(async () => {
     setIsRefreshing(true)
     try {
       // Fetch assignments from API (exposed as major orders endpoint)
@@ -103,19 +99,14 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
     setMissions(defaultMissions)
     setLastRefresh(new Date())
     setIsRefreshing(false)
-  }
-
-  // Auto-refresh every hour (3600000 ms)
-  useEffect(() => {
-    loadMissions() // Load on mount
-    const interval = setInterval(loadMissions, 3600000)
-    return () => clearInterval(interval)
   }, [])
 
-  // Reload when warStatus changes
+  // Auto-refresh every hour (3600000 ms) and reload when warStatus changes
   useEffect(() => {
     loadMissions()
-  }, [warStatus])
+    const interval = setInterval(loadMissions, 3600000)
+    return () => clearInterval(interval)
+  }, [loadMissions, warStatus])
 
   const formatExpiration = (expiration: string | undefined) => {
     if (!expiration) return 'No expiration'
@@ -246,7 +237,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
               type="checkbox" 
               checked={showActiveOnly}
               onChange={(e) => {
-                console.log('Toggle changed:', e.target.checked)
                 setShowActiveOnly(e.target.checked)
               }}
               className="toggle-checkbox"

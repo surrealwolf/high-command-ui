@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import HighCommandAPI from '../services/api'
 import './News.css'
 
@@ -156,7 +156,7 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [displayLimit, setDisplayLimit] = useState(5)
 
-  const loadDispatches = async () => {
+  const loadDispatches = useCallback(async () => {
     setIsRefreshing(true)
     const newsItems: NewsItem[] = []
 
@@ -208,19 +208,14 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
     setNews(newsItems)
     setLastRefresh(new Date())
     setIsRefreshing(false)
-  }
-
-  // Auto-refresh every hour (3600000 ms)
-  useEffect(() => {
-    loadDispatches() // Load on mount
-    const interval = setInterval(loadDispatches, 3600000)
-    return () => clearInterval(interval)
   }, [])
 
-  // Reload when warStatus changes
+  // Auto-refresh every hour (3600000 ms) and reload when warStatus changes
   useEffect(() => {
     loadDispatches()
-  }, [warStatus])
+    const interval = setInterval(loadDispatches, 3600000)
+    return () => clearInterval(interval)
+  }, [loadDispatches, warStatus])
 
   return (
     <div className="news-container">
