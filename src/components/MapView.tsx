@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import HighCommandAPI from '../services/api'
 import './MapView.css'
-
-const SVG_CENTER = 2000
 
 interface Event {
   id?: string
@@ -40,6 +38,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null)
   const [rotation, setRotation] = useState(0)
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   
   // Generate stars once on component mount
   const [stars] = useState(() => {
@@ -63,59 +63,80 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const animRef = useRef<number | null>(null)
 
   // Fetch planets from API on mount
-  useEffect(() => {
-    const loadPlanets = async () => {
-      if (warStatus?.planets && warStatus.planets.length > 0) {
-        // Use warStatus planets if available
-        console.log('Setting planets from warStatus')
-        setPlanets(warStatus.planets)
-      } else {
-        // Try to fetch from planets API endpoint
-        console.log('Fetching planets from API...')
-        try {
-          const data = await HighCommandAPI.getPlanets()
-          console.log('API returned:', data.length, 'planets')
-          
-          if (data && Array.isArray(data) && data.length > 0) {
-            // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
-            // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
-            // Invert Y axis so that positive Y values go up instead of down
-            const scaledPlanets = data.map(planet => ({
-              ...planet,
-              position: planet.position ? {
-                x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
-                y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
-              } : undefined
-            }))
-            
-            console.log('Scaled planets:', scaledPlanets.length)
-            console.log('Sample planet positions:', scaledPlanets.slice(0, 3).map(p => ({ name: p.name, pos: p.position })))
-            setPlanets(scaledPlanets)
-            setIsLoading(false)
-          } else if (data?.planets && Array.isArray(data.planets)) {
-            // Alternative response format
-            const scaledPlanets = data.planets.map((planet: Planet) => ({
-              ...planet,
-              position: planet.position ? {
-                x: (planet.position.x || 0) * 2000,
-                y: -(planet.position.y || 0) * 2000  // Negate Y so up is up
-              } : undefined
-            }))
-            console.log('Using scaled planets from data.planets:', scaledPlanets.length)
-            setPlanets(scaledPlanets)
-            setIsLoading(false)
-          } else {
-            console.log('API returned no valid data')
-            setIsLoading(false)
-          }
-        } catch (error) {
-          console.error('Failed to fetch planets:', error)
-          setIsLoading(false)
-        }
-      }
+  const loadPlanets = useCallback(async () => {
+    setIsRefreshing(true)
+    
+    if (warStatus?.planets && warStatus.planets.length > 0) {
+      // Use warStatus planets if available
+      setPlanets(warStatus.planets)
+      setLastRefresh(new Date())
+      setIsRefreshing(false)
+      return
     }
+    
+    // Try to fetch from planets API endpoint
+    try {
+      const data = await HighCommandAPI.getPlanets()
+      
+      if (!data) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+      
+      let planetsArray: any[] = []
+      
+      // Check if data is directly an array
+      if (Array.isArray(data)) {
+        planetsArray = data
+      } 
+      // Check if data has planets property
+      else if (data?.planets && Array.isArray(data.planets)) {
+        planetsArray = data.planets
+      }
+      // Check if data has other array properties
+      else if (data?.result && Array.isArray(data.result)) {
+        planetsArray = data.result
+      }
+      else {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+      
+      if (planetsArray.length > 0) {
+        // Scale normalized coordinates (-0.93 to 0.93) to SVG space (relative to 2000, 2000)
+        // Map -0.93 to -2000 and 0.93 to 2000, giving us range of ±2000 around center (maximum spread)
+        // Invert Y axis so that positive Y values go up instead of down
+        const scaledPlanets = planetsArray.map(planet => ({
+          ...planet,
+          position: planet.position ? {
+            x: (planet.position.x || 0) * 2000,  // Scale from normalized [-0.93, 0.93] to [-2000, 2000]
+            y: -(planet.position.y || 0) * 2000   // Negate Y so up is up
+          } : undefined
+        }))
+        
+        setPlanets(scaledPlanets)
+        setIsLoading(false)
+        setLastRefresh(new Date())
+        setIsRefreshing(false)
+      } else {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
+    } catch (error) {
+      console.error('Failed to fetch planets:', error)
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [warStatus?.planets])
+
+  useEffect(() => {
     loadPlanets()
-  }, [])
+    // Auto-refresh every hour (3600000 ms)
+    const interval = setInterval(loadPlanets, 3600000)
+    return () => clearInterval(interval)
+  }, [loadPlanets])
 
   // Rotate the star field slowly
   useEffect(() => {
@@ -370,6 +391,20 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
 
   return (
     <div className="map-view">
+      <div className="map-header">
+        <h2>🌍 GALACTIC MAP</h2>
+        <div className="map-header-right">
+          <p className="last-refresh">Last refreshed: {lastRefresh.toLocaleTimeString()}</p>
+          <button 
+            className="refresh-button" 
+            onClick={loadPlanets} 
+            disabled={isRefreshing}
+            title="Manually refresh galactic map"
+          >
+            {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
+          </button>
+        </div>
+      </div>
       <div className="map-container" ref={containerRef}>
         {/* Zoom Controls (viewBox-based) */}
         <div className="zoom-controls">
@@ -416,28 +451,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           </button>
         </div>
 
-        {/* Legend */}
-        <div className="map-legend">
-          <h4>📡 STATUS</h4>
-          <div className="legend-items">
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#00ff00' }}>●</span>
-              <span>Liberated</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#ffff00' }}>●</span>
-              <span>Terminids</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#ff0000' }}>●</span>
-              <span>Automaton</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot" style={{ color: '#9933ff' }}>●</span>
-              <span>Illuminate</span>
-            </div>
-          </div>
-        </div>
         {/* Loading animation */}
         {isLoading && (
           <div className="loading-overlay">
@@ -596,8 +609,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - faction (top left) */}
                 {planet.event && (
                   <text
-                    x={SVG_CENTER + pos.x - 20}
-                    y={SVG_CENTER + pos.y - 20}
+                    x={400 + pos.x - 35}
+                    y={400 + pos.y - 35}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -610,8 +623,8 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 {/* Event emoji indicator - event type (top right) */}
                 {planet.event && (
                   <text
-                    x={SVG_CENTER + pos.x + 20}
-                    y={SVG_CENTER + pos.y - 20}
+                    x={400 + pos.x + 35}
+                    y={400 + pos.y - 35}
                     textAnchor="middle"
                     fontSize="16"
                     className="planet-event-emoji"
@@ -732,6 +745,12 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 <div className="detail-row event-info">
                   <span className="detail-label">🔴 ACTIVE EVENT:</span>
                   <div className="event-details">
+                    {selectedPlanet.event.id && (
+                      <div className="event-detail">
+                        <span className="event-label">MISSION CODE:</span>
+                        <span className="event-value">{selectedPlanet.event.id}</span>
+                      </div>
+                    )}
                     <div className="event-detail">
                       <span className="event-label">FACTION:</span>
                       <span className="event-value">{selectedPlanet.event.faction}</span>

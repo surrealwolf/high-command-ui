@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import HighCommandAPI from '../services/api'
 import './MissionOrders.css'
 
@@ -8,7 +8,7 @@ interface Mission {
   objective: string
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Extreme'
   priority: 'critical' | 'high' | 'normal'
-  status: 'active' | 'available' | 'completed'
+  status: 'active' | 'available' | 'completed' | 'expired'
   // Additional API details
   progress?: number[]
   tasks?: any[]
@@ -24,68 +24,89 @@ interface MissionOrdersProps {
 const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   const [missions, setMissions] = useState<Mission[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [currentTime, setCurrentTime] = useState<number>(Date.now())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [showActiveOnly, setShowActiveOnly] = useState(true)
 
   useEffect(() => {
-    const loadMissions = async () => {
-      try {
-        // Fetch assignments from API (exposed as major orders endpoint)
-        const majorOrders = await HighCommandAPI.getMajorOrders()
-        if (majorOrders) {
-          // API returns array directly or wrapped in 'orders' property
-          let assignments: any[] = []
-          
-          if (Array.isArray(majorOrders)) {
-            assignments = majorOrders
-          } else if (majorOrders.orders && Array.isArray(majorOrders.orders)) {
-            assignments = majorOrders.orders
-          }
-          
-          if (assignments.length > 0) {
-            const apiMissions: Mission[] = assignments.map((order: any, idx: number) => ({
-              id: order.id || `${idx}`,
-              title: order.title || `MAJOR ORDER ${idx + 1}`,
-              objective: order.briefing || order.description || order.objective || 'Objective classified',
-              difficulty: order.difficulty || 'Medium',
-              priority: order.priority || (order.flags === 1 ? 'critical' : 'normal'),
-              status: order.status || 'active',
-              progress: order.progress,
-              tasks: order.tasks,
-              reward: order.reward,
-              expiration: order.expiration,
-              flags: order.flags
-            }))
-            setMissions(apiMissions)
-            return
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load major orders:', error)
-      }
-      
-      // Fallback: use default missions if API fails or no data
-      const defaultMissions: Mission[] = [
-        {
-          id: '1',
-          title: 'OPERATION: LIBERATION DAWN',
-          objective: 'Eliminate Terminid forces and secure strategic positions. Maintain heavy weapons support.',
-          difficulty: 'Hard',
-          priority: 'critical',
-          status: 'active'
-        },
-        {
-          id: '2',
-          title: 'PLANETARY DEFENSE PROTOCOL',
-          objective: 'Protect civilian installations from Automaton incursions. Establish defensive perimeter.',
-          difficulty: 'Extreme',
-          priority: 'critical',
-          status: 'active'
-        }
-      ]
-      setMissions(defaultMissions)
-    }
+    // Set up interval to update current time every second for countdown
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
+  const loadMissions = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      // Fetch assignments from API (exposed as major orders endpoint)
+      const majorOrders = await HighCommandAPI.getMajorOrders()
+      if (majorOrders) {
+        // API returns array directly or wrapped in 'orders' property
+        let assignments: any[] = []
+        
+        if (Array.isArray(majorOrders)) {
+          assignments = majorOrders
+        } else if (majorOrders.orders && Array.isArray(majorOrders.orders)) {
+          assignments = majorOrders.orders
+        }
+        
+        if (assignments.length > 0) {
+          const apiMissions: Mission[] = assignments.map((order: any, idx: number) => ({
+            id: order.id || `${idx}`,
+            title: order.title || `MAJOR ORDER ${idx + 1}`,
+            objective: order.briefing || order.description || order.objective || 'Objective classified',
+            difficulty: order.difficulty || 'Medium',
+            priority: order.priority || (order.flags === 1 ? 'critical' : 'normal'),
+            // Determine status based on expiration: if expired, mark as 'expired', otherwise 'active'
+            status: (order.expiration && new Date(order.expiration).getTime() < Date.now()) ? 'expired' : 'active',
+            progress: order.progress,
+            tasks: order.tasks,
+            reward: order.reward,
+            expiration: order.expiration,
+            flags: order.flags
+          }))
+          setMissions(apiMissions)
+          setLastRefresh(new Date())
+          setIsRefreshing(false)
+          return
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load major orders:', error)
+    }
+    
+    // Fallback: use default missions if API fails or no data
+    const defaultMissions: Mission[] = [
+      {
+        id: '1',
+        title: 'OPERATION: LIBERATION DAWN',
+        objective: 'Eliminate Terminid forces and secure strategic positions. Maintain heavy weapons support.',
+        difficulty: 'Hard',
+        priority: 'critical',
+        status: 'active'
+      },
+      {
+        id: '2',
+        title: 'PLANETARY DEFENSE PROTOCOL',
+        objective: 'Protect civilian installations from Automaton incursions. Establish defensive perimeter.',
+        difficulty: 'Extreme',
+        priority: 'critical',
+        status: 'active'
+      }
+    ]
+    setMissions(defaultMissions)
+    setLastRefresh(new Date())
+    setIsRefreshing(false)
+  }, [])
+
+  // Auto-refresh every hour (3600000 ms) and reload when warStatus changes
+  useEffect(() => {
     loadMissions()
-  }, [warStatus])
+    const interval = setInterval(loadMissions, 3600000)
+    return () => clearInterval(interval)
+  }, [loadMissions, warStatus])
 
   const formatExpiration = (expiration: string | undefined) => {
     if (!expiration) return 'No expiration'
@@ -130,28 +151,29 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   }
 
   const getTimeRemaining = (expiration: string | undefined) => {
-    if (!expiration) return { hours: 0, formatted: 'No deadline', status: 'normal' }
+    if (!expiration) return { hours: 0, minutes: 0, seconds: 0, formatted: 'No deadline', status: 'normal' }
     try {
       const expiryTime = new Date(expiration).getTime()
-      const now = Date.now()
-      const ms = expiryTime - now
+      const ms = expiryTime - currentTime
 
       if (ms <= 0) {
-        return { hours: 0, formatted: 'EXPIRED', status: 'expired' }
+        return { hours: 0, minutes: 0, seconds: 0, formatted: 'EXPIRED', status: 'expired' }
       }
 
       const hours = Math.floor(ms / (1000 * 60 * 60))
       const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+      const secs = Math.floor((ms % (1000 * 60)) / 1000)
 
       let formatted = ''
-      if (hours > 0) formatted += `${hours}h`
-      if (mins > 0) formatted += ` ${mins}m`
+      if (hours > 0) formatted += `${hours}h `
+      if (mins > 0 || hours > 0) formatted += `${mins}m `
+      formatted += `${secs}s`
 
       const status = hours < 24 ? (hours < 1 ? 'urgent' : 'urgent') : 'normal'
 
-      return { hours, formatted, status }
+      return { hours, minutes: mins, seconds: secs, formatted, status }
     } catch {
-      return { hours: 0, formatted: 'Unknown', status: 'normal' }
+      return { hours: 0, minutes: 0, seconds: 0, formatted: 'Unknown', status: 'normal' }
     }
   }
 
@@ -194,15 +216,41 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
   return (
     <div className="mission-orders-container">
       <div className="mission-header">
-        <h2>⭐ MAJOR ORDERS</h2>
-        <p className="mission-subheader">ACTIVE ASSIGNMENTS</p>
+        <div className="mission-header-top">
+          <h2>⭐ MAJOR ORDERS</h2>
+          <div className="mission-header-right">
+            <p className="last-refresh">Last refreshed: {lastRefresh.toLocaleTimeString()}</p>
+            <button 
+              className="refresh-button" 
+              onClick={loadMissions} 
+              disabled={isRefreshing}
+              title="Manually refresh major orders"
+            >
+              {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
+            </button>
+          </div>
+        </div>
+        <div className="mission-subheader-row">
+          <p className="mission-subheader">ACTIVE ASSIGNMENTS</p>
+          <label className="toggle-label">
+            <input 
+              type="checkbox" 
+              checked={showActiveOnly}
+              onChange={(e) => {
+                setShowActiveOnly(e.target.checked)
+              }}
+              className="toggle-checkbox"
+            />
+            <span>Active Only</span>
+          </label>
+        </div>
       </div>
 
       <div className="mission-sections">
         <div className="mission-briefing">
           <div className="missions-list">
             {missions
-              .filter((m) => m.status === 'active')
+              .filter((m) => showActiveOnly ? m.status === 'active' : true)
               .map((mission) => (
                 <div
                   key={mission.id}
@@ -274,7 +322,7 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
                   )}
                 </div>
               ))}
-            {missions.filter((m) => m.status === 'active').length === 0 && (
+            {missions.filter((m) => showActiveOnly ? m.status === 'active' : true).length === 0 && (
               <div className="no-missions">
                 <p>No active assignments at this time.</p>
               </div>
