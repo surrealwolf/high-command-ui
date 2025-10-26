@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './ChatInterface.css'
 
 interface Message {
@@ -77,7 +78,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
               <div className="message-content">
                 <div className="message-text">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      table: ({node, ...props}) => (
+                        <table {...props} />
+                      ),
+                      thead: ({node, ...props}) => (
+                        <thead {...props} />
+                      ),
+                      tbody: ({node, ...props}) => (
+                        <tbody {...props} />
+                      ),
+                      tr: ({node, ...props}) => (
+                        <tr {...props} />
+                      ),
+                      th: ({node, ...props}) => (
+                        <th {...props} />
+                      ),
+                      td: ({node, ...props}) => (
+                        <td {...props} />
+                      )
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
                 <span className="message-time">
                   {msg.timestamp.toLocaleTimeString()}
