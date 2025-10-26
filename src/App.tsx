@@ -244,7 +244,7 @@ function App() {
                 <ul>
                   <li><strong>War Status:</strong> "What's the current war status?" / "Show me the war situation"</li>
                   <li><strong>Planet Data:</strong> "What planets are we fighting on?" / "Show active planets"</li>
-                  <li><strong>Campaign Info:</strong> "What's the current campaign?" / "Campaign details"</li>
+                  <li><strong>Major Orders:</strong> "What are the major orders?" / "Show current objectives"</li>
                   <li><strong>Faction Stats:</strong> "Show faction information" / "What factions are active?"</li>
                   <li><strong>Biome Data:</strong> "Show biome information" / "What biomes exist?"</li>
                   <li><strong>Statistics:</strong> "Show global statistics" / "What are our stats?"</li>

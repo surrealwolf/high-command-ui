@@ -22,11 +22,11 @@ const DataDisplay: React.FC<DataDisplayProps> = ({ warStatus }) => {
       <div className="data-section">
         <h3>📡 AVAILABLE TACTICAL COMMANDS</h3>
         <ul className="command-list">
-          <li><code>Get war status</code> - Retrieve current campaign tactical data</li>
+          <li><code>Get war status</code> - Retrieve current major orders and tactical data</li>
           <li><code>Show planets</code> - List all strategic planetary objectives</li>
           <li><code>Get factions</code> - Display faction military intelligence</li>
           <li><code>Get biomes</code> - Planetary terrain and biome classification data</li>
-          <li><code>Get statistics</code> - Global combat and campaign statistics</li>
+          <li><code>Get statistics</code> - Global combat and major orders statistics</li>
         </ul>
       </div>
     </div>
