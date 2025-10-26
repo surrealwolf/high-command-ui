@@ -62,8 +62,9 @@ preview: build
 run: build
 	npm run preview
 
-# Type checking
-lint:
+# Type checking and linting
+lint: install
+	npm run lint
 	tsc --noEmit
 
 # Code formatting (placeholder - add when prettier is installed)
