@@ -36,8 +36,8 @@ function App() {
   const [warStatus, setWarStatus] = useState<WarStatus | null>(null)
   const [dailyQuote, setDailyQuote] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'console' | 'major' | 'news' | 'galactic' | 'help'>('console')
-  const [isApiAvailable, setIsApiAvailable] = useState(true)  // Track API availability
-  const [upstreamApiDegraded, setUpstreamApiDegraded] = useState(false)  // Track upstream API status
+  const [isApiAvailable, setIsApiAvailable] = useState(true)
+  const [upstreamApiDegraded, setUpstreamApiDegraded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,34 +45,21 @@ function App() {
   }, [messages])
 
   useEffect(() => {
-    // Load initial war status and statistics
     const loadData = async () => {
       try {
-        // First check health status for upstream API health
         const healthStatus = await HighCommandAPI.getStatus()
         console.log('Health status loaded:', healthStatus)
         
         if (healthStatus !== null && healthStatus !== undefined) {
-          // Base API is available and responding
           setIsApiAvailable(true)
-          console.log('API Available: true')
-          
-          // Check upstream API status
-          // Expected: upstream_api is 'online' or 'offline'
           const upstreamStatus = healthStatus.upstream_api
           console.log('Upstream API status:', upstreamStatus)
-          
-          // Set degraded if upstream is not 'online'
           setUpstreamApiDegraded(upstreamStatus !== 'online')
-          console.log('Upstream degraded:', upstreamStatus !== 'online')
         } else {
-          // Health check failed - base API is not responding
-          console.log('API Available: false (health check failed)')
           setIsApiAvailable(false)
           setUpstreamApiDegraded(false)
         }
         
-        // Then fetch war status for stats
         const warStatus = await HighCommandAPI.getWarStatus()
         if (warStatus) {
           console.log('War status loaded:', warStatus)
@@ -86,16 +73,13 @@ function App() {
     }
     loadData()
     
-    // Set daily inspirational quote
     const dayIndex = new Date().getDate() % INSPIRATIONAL_QUOTES.length
     setDailyQuote(INSPIRATIONAL_QUOTES[dayIndex])
 
-    // Refresh every 30 seconds
     const interval = setInterval(loadData, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  // Debug: Log API status changes
   useEffect(() => {
     console.log('📊 LIVE Indicator Status:', {
       isApiAvailable,
@@ -124,7 +108,6 @@ function App() {
       }
       setMessages(prev => [...prev, assistantMessage])
 
-      // Try to fetch war status for context
       const status = await HighCommandAPI.getWarStatus()
       setWarStatus(status)
     } catch (error) {
@@ -147,7 +130,6 @@ function App() {
           <h1>⚔️ HELLDIVERS 2: HIGH COMMAND</h1>
           <p className="subtitle">H.E.L.L. — High-Endurance Liberation Logistics</p>
           
-          {/* Daily Inspirational Quote */}
           <div className="quote-banner">
             <span className="quote-icon">✦</span>
             <span className="quote-text">{dailyQuote}</span>
@@ -163,15 +145,15 @@ function App() {
               </div>
               <div className="stat-item">
                 <span className="stat-label">TERMINID KILLS</span>
-                <span className="stat-value">{(warStatus.statistics?.terminidKills ? Math.floor(warStatus.statistics.terminidKills / 1e9) : 0)}B</span>
+                <span className="stat-value">{warStatus.statistics?.terminidKills ? warStatus.statistics.terminidKills.toLocaleString() : 'N/A'}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">AUTOMATON KILLS</span>
-                <span className="stat-value">{(warStatus.statistics?.automatonKills ? Math.floor(warStatus.statistics.automatonKills / 1e9) : 0)}B</span>
+                <span className="stat-value">{warStatus.statistics?.automatonKills ? warStatus.statistics.automatonKills.toLocaleString() : 'N/A'}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">ILLUMINATE KILLS</span>
-                <span className="stat-value">{(warStatus.statistics?.illuminateKills ? Math.floor(warStatus.statistics.illuminateKills / 1e9) : 0)}B</span>
+                <span className="stat-value">{warStatus.statistics?.illuminateKills ? warStatus.statistics.illuminateKills.toLocaleString() : 'N/A'}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">MISSIONS WON</span>
@@ -191,7 +173,6 @@ function App() {
             </div>
           )}
           
-          {/* Always show LIVE indicator regardless of API status */}
           <div className="stat-item live-indicator">
             <span className={`live-dot ${!isApiAvailable ? 'offline' : upstreamApiDegraded ? 'degraded' : 'live'}`}></span>
             <span className={`live-text ${!isApiAvailable ? 'offline' : upstreamApiDegraded ? 'degraded' : ''}`}>
@@ -200,7 +181,6 @@ function App() {
           </div>
         </div>
         
-        {/* Democracy Officer Reminder */}
         <div className="democracy-reminder">
           ⚠️ REMINDER: Report any suspicious activity or foul play to your Democracy Officer immediately. Treason will not be tolerated.
         </div>

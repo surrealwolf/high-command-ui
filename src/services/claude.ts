@@ -95,7 +95,6 @@ export class ClaudeService {
         throw new Error(`MCP Error: ${data.error.message}`)
       }
 
-      // Extract text from MCP response format
       if (data.result?.content?.[0]?.text) {
         return data.result.content[0].text
       }
@@ -119,14 +118,12 @@ export class ClaudeService {
         throw new Error('No tools available from MCP server')
       }
 
-      // Format tools for Claude
       const claudeTools = tools.map(tool => ({
         name: tool.name,
         description: tool.description,
         input_schema: tool.inputSchema
       }))
 
-      // Call Claude via local proxy
       const response = await fetch('/claude/messages', {
         method: 'POST',
         headers: {
@@ -138,20 +135,31 @@ export class ClaudeService {
           model: 'claude-haiku-4-5',
           max_tokens: 1024,
           tools: claudeTools,
-          system: `You are a tactical AI assistant for Hell Divers 2 command. Format your responses in clear, readable Markdown.
+          system: `You are a tactical AI assistant for Hell Divers 2 command. Format your responses in clear, readable Markdown for display in a chat interface.
 
-IMPORTANT: Do NOT use markdown tables (with pipes |). Instead, present data using:
-- **Bold headers** with colons for key information
-- Bullet points for lists
-- Numbered lists for sequences
-- Inline code for values using backticks
-- Code blocks for structured data using triple backticks
+IMPORTANT TABLE FORMATTING RULES:
+- ALWAYS use markdown tables with pipes (|) for ANY data with rows and columns
+- NEVER use tab-separated text, plain text tables, or other formats
+- Table format: | Header1 | Header2 | Header3 |
+              | --------- | --------- | --------- |
+              | Value1 | Value2 | Value3 |
+- Include a separator row with dashes under headers
+- Every table must use pipe characters (|) consistently
 
-Example format for data:
-**Metric Name:** value
-**Another Metric:** value
+Example of correct table format:
+| Metric | Value | Status |
+| --- | --- | --- |
+| Active Players | 89,417 | 🟢 Online |
+| Missions Won | 717,867,314 | ✅ Success |
 
-Use clear hierarchy with headers (## and ###) and emphasis for important information.`,
+Other formatting options:
+- **Bold headers with colons** for key information
+- Bullet points (- or *) for lists
+- Numbered lists (1., 2., 3.) for sequences
+- Inline code with backticks for values: \`example\`
+- Code blocks with triple backticks for large data blocks
+
+Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdown tables for structured data.`,
           messages: [
             ...this.conversationHistory,
             {
@@ -169,11 +177,9 @@ Use clear hierarchy with headers (## and ###) and emphasis for important informa
 
       const data = await response.json()
       
-      // Process Claude's response - might include tool uses
       let finalResponse = ''
       let toolCalls: Array<{name: string; input: ToolInput}> = []
 
-      // Extract content blocks - concatenate all text blocks
       for (const block of data.content) {
         if (block.type === 'text') {
           finalResponse += block.text
@@ -185,11 +191,9 @@ Use clear hierarchy with headers (## and ###) and emphasis for important informa
         }
       }
 
-      // If Claude wants to call tools, do it
       if (toolCalls.length > 0) {
         const toolResults: Array<{type: string; tool_use_id: string; content: string}> = []
         
-        // Extract tool use IDs from Claude's response
         const toolUseIds: string[] = []
         for (const block of data.content) {
           if (block.type === 'tool_use') {
@@ -249,7 +253,6 @@ Use clear hierarchy with headers (## and ###) and emphasis for important informa
 
         const followUpData = await followUpResponse.json()
         
-        // Extract final text response - concatenate all text blocks
         let finalText = ''
         for (const block of followUpData.content) {
           if (block.type === 'text') {
@@ -257,7 +260,6 @@ Use clear hierarchy with headers (## and ###) and emphasis for important informa
           }
         }
         
-        // Store in conversation history
         this.conversationHistory.push({
           role: 'user',
           content: userMessage
@@ -270,7 +272,6 @@ Use clear hierarchy with headers (## and ###) and emphasis for important informa
         return finalText || 'No response from Claude'
       }
 
-      // Store in conversation history (no tool calls)
       this.conversationHistory.push({
         role: 'user',
         content: userMessage
