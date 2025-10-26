@@ -249,6 +249,38 @@
   transition: font-size 0.2s, opacity 0.2s;
 }
 
+.planet-campaign-emoji {
+  /* Campaign emoji display - top right indicator */
+  pointer-events: none;
+  font-size: 20pt;
+  opacity: 1;
+  transition: font-size 0.2s, opacity 0.2s;
+  filter: drop-shadow(0 0 4px rgba(255, 136, 0, 0.6));
+}
+
+.planet-campaign-pulse {
+  /* Pulsing ring animation for campaign planets */
+  animation: campaign-pulse 2s infinite ease-in-out;
+}
+
+@keyframes campaign-pulse {
+  0% {
+    r: 20px;
+    opacity: 0.6;
+    stroke-width: 2;
+  }
+  50% {
+    r: 28px;
+    opacity: 0.2;
+    stroke-width: 1;
+  }
+  100% {
+    r: 20px;
+    opacity: 0.6;
+    stroke-width: 2;
+  }
+}
+
 .map-details {
   position: fixed;
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -351,6 +383,15 @@
   align-items: stretch;
 }
 
+.detail-row.campaign-info {
+  background: rgba(255, 136, 0, 0.08);
+  padding: 8px 6px;
+  border: 1px solid rgba(255, 136, 0, 0.3);
+  margin-top: 4px;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .event-details {
   display: flex;
   flex-direction: column;
@@ -389,6 +430,48 @@
 }
 
 .event-health-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.campaign-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 0;
+}
+
+.campaign-detail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.campaign-label {
+  color: rgba(255, 179, 0, 0.8);
+  min-width: 90px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.campaign-value {
+  color: #ffb300;
+  flex: 1;
+}
+
+.campaign-health-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 136, 0, 0.2);
+  position: relative;
+  min-width: 80px;
+}
+
+.campaign-health-fill {
   height: 100%;
   transition: width 0.3s ease;
 }

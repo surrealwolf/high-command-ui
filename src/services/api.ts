@@ -79,7 +79,7 @@ class HighCommandAPI {
     
     if (lower.includes('war') || lower.includes('status')) return 'get_war_status'
     if (lower.includes('planet')) return 'get_planets'
-    if (lower.includes('campaign')) return 'get_campaign_info'
+    if (lower.includes('major order') || lower.includes('orders')) return 'get_campaign_info'
     if (lower.includes('faction')) return 'get_factions'
     if (lower.includes('biome')) return 'get_biomes'
     if (lower.includes('statistic') || lower.includes('stats')) return 'get_statistics'
@@ -237,6 +237,20 @@ class HighCommandAPI {
       return await response.json()
     } catch (error) {
       console.error('Error fetching planet events:', error)
+      return null
+    }
+  }
+
+  async getActiveCampaigns() {
+    try {
+      const response = await fetch(`${this.baseUrl}/campaigns/active`)
+      if (!response.ok) {
+        console.error(`Error fetching active campaigns: HTTP ${response.status}`)
+        return null
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching active campaigns:', error)
       return null
     }
   }

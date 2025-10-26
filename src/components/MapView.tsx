@@ -40,6 +40,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
   const [isLoading, setIsLoading] = useState(true)  // Track loading state
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([])
   
   // Generate stars once on component mount
   const [stars] = useState(() => {
@@ -131,12 +132,39 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     }
   }, [warStatus?.planets])
 
+  // Load active campaigns
+  const loadCampaigns = useCallback(async () => {
+    try {
+      const data = await HighCommandAPI.getActiveCampaigns()
+      if (data) {
+        let campaignsArray: any[] = []
+        
+        // Handle different response formats
+        if (Array.isArray(data)) {
+          campaignsArray = data
+        } else if (data?.campaigns && Array.isArray(data.campaigns)) {
+          campaignsArray = data.campaigns
+        } else if (data?.result && Array.isArray(data.result)) {
+          campaignsArray = data.result
+        }
+        
+        setActiveCampaigns(campaignsArray)
+      }
+    } catch (error) {
+      console.error('Failed to fetch active campaigns:', error)
+    }
+  }, [])
+
   useEffect(() => {
     loadPlanets()
+    loadCampaigns()
     // Auto-refresh every hour (3600000 ms)
-    const interval = setInterval(loadPlanets, 3600000)
+    const interval = setInterval(() => {
+      loadPlanets()
+      loadCampaigns()
+    }, 3600000)
     return () => clearInterval(interval)
-  }, [loadPlanets])
+  }, [loadPlanets, loadCampaigns])
 
   // Rotate the star field slowly
   useEffect(() => {
@@ -167,6 +195,27 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
     return 'neutral'
   }
 
+  const getPlanetCampaign = (planet: any) => {
+    if (!activeCampaigns || activeCampaigns.length === 0) return null
+    return activeCampaigns.find((campaign: any) => campaign.planet?.index === planet.index)
+  }
+
+  const getCampaignEmoji = (campaign: any) => {
+    if (!campaign) return null
+    
+    // Use event faction if available, otherwise use planet's currentOwner (attacking faction)
+    const faction = campaign.planet?.event?.faction || campaign.planet?.currentOwner
+    const factionEmojis: Record<string, string> = {
+      'Terminids': '🐛',
+      'Automaton': '🤖',
+      'Automatons': '🤖',
+      'Illuminate': '👁️',
+      'Humans': '👨'  // Fallback for Humans
+    }
+    
+    return factionEmojis[faction ?? ''] || '⭐'
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'liberated':
@@ -180,17 +229,6 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
       default:
         return '#999999'
     }
-  }
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      liberated: 'LIBERATED',
-      'under-siege': 'UNDER SIEGE',
-      'contested-automaton': 'AUTOMATON',
-      'contested-illuminate': 'ILLUMINATE',
-      neutral: 'NEUTRAL'
-    }
-    return labels[status] || 'UNKNOWN'
   }
 
   const getEventColor = (event: Event | null | undefined) => {
@@ -553,8 +591,17 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
           {planets && planets.map((planet: Planet, idx: number) => {
             const pos = getPlanetPosition(planet, idx, planets.length)
             const status = getPlanetStatus(planet)
-            // Use event color if planet has an event, otherwise use status color
-            const color = planet.event && getEventColor(planet.event) || getStatusColor(status)
+            const campaign = getPlanetCampaign(planet)
+            
+            // Use event color (priority), then status color (campaigns use pulsing effect instead)
+            let color: string
+            if (planet.event) {
+              const eventColor = getEventColor(planet.event)
+              color = eventColor || getStatusColor(status)
+            } else {
+              color = getStatusColor(status)
+            }
+            
             const isSelected = selectedPlanet?.index === planet.index
             
             // Determine stroke color: selected = yellow, normal = faint white
@@ -564,6 +611,11 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
               strokeColor = '#ffff00'  // Yellow for selected
               strokeWidth = 3
             }
+            
+            // Get pulse color from campaign faction
+            const campaignPulseColor = campaign && campaign.planet?.event?.faction 
+              ? getEventColor(campaign.planet.event)
+              : null
 
             return (
               <g key={planet.index || idx}>
@@ -577,6 +629,20 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   className="planet-glow"
                 />
 
+                {/* Campaign pulse effect - animated ring for planets with active campaigns */}
+                {campaign && campaignPulseColor && (
+                  <circle
+                    cx={400 + pos.x}
+                    cy={400 + pos.y}
+                    r="20"
+                    fill="none"
+                    stroke={campaignPulseColor}
+                    strokeWidth="2"
+                    opacity="0.6"
+                    className="planet-campaign-pulse"
+                  />
+                )}
+
                 {/* Planet */}
                 <circle
                   cx={400 + pos.x}
@@ -587,7 +653,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   strokeWidth={strokeWidth}
                   style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
                   onClick={() => setSelectedPlanet(planet)}
-                  className={`${isSelected ? 'planet-selected' : ''} ${planet.event ? 'planet-event' : ''}`}
+                  className={`${isSelected ? 'planet-selected' : ''} ${planet.event ? 'planet-event' : ''} ${campaign ? 'planet-campaign' : ''}`}
                 />
 
                 {/* Planet label */}
@@ -606,7 +672,21 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   {planet.name}
                 </text>
 
-                {/* Event emoji indicator - faction (top left) */}
+                {/* Campaign emoji indicator - top right when campaign active (no event) */}
+                {campaign && !planet.event && (
+                  <text
+                    x={400 + pos.x + 35}
+                    y={400 + pos.y - 35}
+                    textAnchor="middle"
+                    fontSize="16"
+                    className="planet-campaign-emoji"
+                    style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                  >
+                    {getCampaignEmoji(campaign)}
+                  </text>
+                )}
+
+                {/* Event emoji indicator - faction (top left, takes priority) */}
                 {planet.event && (
                   <text
                     x={400 + pos.x - 35}
@@ -666,7 +746,7 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   className="detail-value status-badge"
                   style={{ color: getStatusColor(getPlanetStatus(selectedPlanet)) }}
                 >
-                  {getStatusLabel(getPlanetStatus(selectedPlanet))}
+                  {selectedPlanet.currentOwner || 'UNKNOWN'}
                 </span>
               </div>
 
@@ -677,24 +757,26 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                 </div>
               )}
 
-              {selectedPlanet.currentOwner && (
-                <div className="detail-row">
-                  <span className="detail-label">OWNER:</span>
-                  <span className="detail-value">{selectedPlanet.currentOwner}</span>
-                </div>
-              )}
-
-              {selectedPlanet.biomeType && (
-                <div className="detail-row">
-                  <span className="detail-label">BIOME:</span>
-                  <span className="detail-value">{selectedPlanet.biomeType}</span>
-                </div>
-              )}
-
-              {selectedPlanet.section && (
+              {selectedPlanet.sector && (
                 <div className="detail-row">
                   <span className="detail-label">SECTOR:</span>
-                  <span className="detail-value">{selectedPlanet.section}</span>
+                  <span className="detail-value">{selectedPlanet.sector}</span>
+                </div>
+              )}
+
+              {selectedPlanet.biome?.name && (
+                <div className="detail-row">
+                  <span className="detail-label">BIOME:</span>
+                  <span className="detail-value">{selectedPlanet.biome.name}</span>
+                </div>
+              )}
+
+              {selectedPlanet.hazards && selectedPlanet.hazards.length > 0 && (
+                <div className="detail-row">
+                  <span className="detail-label">HAZARDS:</span>
+                  <span className="detail-value">
+                    {selectedPlanet.hazards.map((h: any) => h.name).join(', ')}
+                  </span>
                 </div>
               )}
 
@@ -792,6 +874,121 @@ const MapView: React.FC<MapViewProps> = ({ warStatus }) => {
                   </div>
                 </div>
               )}
+
+              {/* Show active campaign for this planet (after events - events take priority) */}
+              {(() => {
+                const activeCampaign = activeCampaigns?.find((campaign: any) => campaign.planet?.index === selectedPlanet.index)
+                
+                const getEventTypeEmoji = (eventType: number) => {
+                  switch(eventType) {
+                    case 1: return '⚔️'  // ATTACK
+                    case 2: return '🛡️'  // DEFENSE
+                    case 3: return '💣'  // SABOTAGE
+                    default: return '❓'
+                  }
+                }
+                
+                const getEventTypeLabel = (eventType: number) => {
+                  switch(eventType) {
+                    case 1: return 'ATTACK'
+                    case 2: return 'DEFENSE'
+                    case 3: return 'SABOTAGE'
+                    default: return `TYPE ${eventType}`
+                  }
+                }
+                
+                // Show campaign if planet has an active campaign (with or without event)
+                return activeCampaign ? (
+                  <div className="detail-row campaign-info">
+                    <span className="detail-label">⭐ ACTIVE CAMPAIGN:</span>
+                    <div className="campaign-details">
+                      {activeCampaign.id && (
+                        <div className="campaign-detail">
+                          <span className="campaign-label">CAMPAIGN ID:</span>
+                          <span className="campaign-value">{activeCampaign.id}</span>
+                        </div>
+                      )}
+                      {!activeCampaign.planet?.event && (
+                        <>
+                          {activeCampaign.planet?.event?.eventType !== undefined ? (
+                            <div className="campaign-detail">
+                              <span className="campaign-label">
+                                {getEventTypeEmoji(activeCampaign.planet.event.eventType)} TYPE:
+                              </span>
+                              <span className="campaign-value">
+                                {getEventTypeLabel(activeCampaign.planet.event.eventType)}
+                              </span>
+                            </div>
+                          ) : (
+                            // Fallback: show campaign type as CONTESTED
+                            <div className="campaign-detail">
+                              <span className="campaign-label">🔴 STATUS:</span>
+                              <span className="campaign-value">CONTESTED</span>
+                            </div>
+                          )}
+                          {activeCampaign.planet?.event?.faction ? (
+                            <div className="campaign-detail">
+                              <span className="campaign-label">FACTION:</span>
+                              <span className="campaign-value">{activeCampaign.planet.event.faction}</span>
+                            </div>
+                          ) : activeCampaign.planet?.currentOwner && activeCampaign.planet?.currentOwner !== 'Humans' ? (
+                            // Fallback: show current owner if not human-controlled
+                            <div className="campaign-detail">
+                              <span className="campaign-label">FACTION:</span>
+                              <span className="campaign-value">{activeCampaign.planet.currentOwner}</span>
+                            </div>
+                          ) : null}
+                          {activeCampaign.planet?.event?.startTime && (
+                            <div className="campaign-detail">
+                              <span className="campaign-label">STARTED:</span>
+                              <span className="campaign-value">
+                                {new Date(activeCampaign.planet.event.startTime).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {activeCampaign.planet?.event?.endTime && (
+                            <div className="campaign-detail">
+                              <span className="campaign-label">EXPIRES:</span>
+                              <span className="campaign-value">
+                                {new Date(activeCampaign.planet.event.endTime).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {activeCampaign.planet?.event?.health !== undefined && activeCampaign.planet?.event?.maxHealth && (
+                            <div className="campaign-detail">
+                              <span className="campaign-label">PROGRESS:</span>
+                              <div className="campaign-health-bar">
+                                <div
+                                  className="campaign-health-fill"
+                                  style={{
+                                    width: `${(activeCampaign.planet.event.health / activeCampaign.planet.event.maxHealth) * 100}%`,
+                                    backgroundColor: '#ff8800'
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="campaign-value">
+                                {activeCampaign.planet.event.health.toLocaleString()} / {activeCampaign.planet.event.maxHealth.toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {activeCampaign.planet?.statistics?.playerCount !== undefined && (
+                        <div className="campaign-detail">
+                          <span className="campaign-label">HELL DIVERS:</span>
+                          <span className="campaign-value">{activeCampaign.planet.statistics.playerCount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {activeCampaign.planet?.statistics?.missionSuccessRate !== undefined && (
+                        <div className="campaign-detail">
+                          <span className="campaign-label">SUCCESS RATE:</span>
+                          <span className="campaign-value">{activeCampaign.planet.statistics.missionSuccessRate}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null
+              })()}
 
               {selectedPlanet.threatLevel && (
                 <div className="detail-row">
