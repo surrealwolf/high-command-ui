@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import DataDisplay from '../../components/DataDisplay'
+import DataDisplay from '../components/DataDisplay'
 
 describe('DataDisplay Component', () => {
   beforeEach(() => {

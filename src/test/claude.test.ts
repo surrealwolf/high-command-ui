@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ClaudeService } from '../../services/claude'
+import { ClaudeService } from '../services/claude'
 
 describe('ClaudeService', () => {
   let claudeService: ClaudeService

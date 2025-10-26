@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock the ClaudeService to avoid dependencies
-vi.mock('../../services/claude', () => ({
+vi.mock('../services/claude', () => ({
   ClaudeService: vi.fn(() => ({
     executeCommand: vi.fn(),
     getAvailableTools: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock('../../services/claude', () => ({
 }))
 
 // We need to import after mocking
-import HighCommandAPI from '../../services/api'
+import HighCommandAPI from '../services/api'
 
 describe('HighCommandAPI', () => {
   let api: HighCommandAPI
