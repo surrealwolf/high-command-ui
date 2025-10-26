@@ -19,10 +19,15 @@ help:
 	@echo "  make run            - Build and run production version"
 	@echo ""
 	@echo "Testing & Quality:"
+	@echo "  make test           - Run unit tests (Vitest)"
+	@echo "  make test-ui        - Run unit tests with UI dashboard"
+	@echo "  make test-coverage  - Generate coverage report"
+	@echo "  make test-e2e       - Run E2E tests (Playwright)"
+	@echo "  make test-all       - Run all tests (unit + E2E)"
 	@echo "  make lint           - Run TypeScript type checking"
 	@echo "  make format         - Format code with prettier"
-	@echo "  make check          - Run type checking and tests"
-	@echo "  make check-all      - Format, lint, and verify"
+	@echo "  make check          - Run type checking and unit tests"
+	@echo "  make check-all      - Format, lint, tests, and build"
 	@echo ""
 	@echo "Docker Targets:"
 	@echo "  make docker-build   - Build Docker image"
@@ -57,23 +62,40 @@ preview: build
 run: build
 	npm run preview
 
-# Type checking
-lint:
+# Type checking and linting
+lint: install
+	npm run lint
 	tsc --noEmit
 
 # Code formatting (placeholder - add when prettier is installed)
 format:
 	@echo "Format target not configured yet. Add prettier or your formatter here."
 
-# Testing (placeholder - add when test framework is installed)
-test:
-	@echo "Test target not configured yet. Add vitest or jest here."
+# Unit testing with Vitest
+test: install
+	npm run test
+
+# Unit testing with UI dashboard
+test-ui: install
+	npm run test:ui
+
+# Test coverage report
+test-coverage: install
+	npm run test:coverage
+
+# E2E testing with Playwright
+test-e2e: install
+	npm run test:e2e
+
+# Run all tests (unit + E2E)
+test-all: test test-e2e
+	@echo "✓ All tests passed"
 
 # Quality checks
-check: lint
-	@echo "✓ Type checking passed"
+check: lint test
+	@echo "✓ Type checking and tests passed"
 
-check-all: format lint build
+check-all: format lint test test-e2e build
 	@echo "✓ All checks passed"
 
 # Clean build artifacts
