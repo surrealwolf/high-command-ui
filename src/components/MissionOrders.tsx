@@ -4,7 +4,6 @@ import './MissionOrders.css'
 
 interface Mission {
   id: string
-  title: string
   objective: string
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Extreme'
   priority: 'critical' | 'high' | 'normal'
@@ -54,7 +53,6 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
         if (assignments.length > 0) {
           const apiMissions: Mission[] = assignments.map((order: any, idx: number) => ({
             id: order.id || `${idx}`,
-            title: order.title || `MAJOR ORDER ${idx + 1}`,
             objective: order.briefing || order.description || order.objective || 'Objective classified',
             difficulty: order.difficulty || 'Medium',
             priority: order.priority || (order.flags === 1 ? 'critical' : 'normal'),
@@ -235,7 +233,7 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
               .map((mission) => (
                 <div
                   key={mission.id}
-                  className={`mission-card status-${mission.status} priority-${mission.priority} expanded ${getMissionCardClass(mission.expiration)} ${
+                  className={`mission-card status-${mission.status} priority-${mission.priority} ${getMissionCardClass(mission.expiration)} ${
                     getOrderFailed(mission.progress, mission.expiration) ? 'status-failed' : ''
                   }`}
                 >
