@@ -191,6 +191,7 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
         }
       }
 
+      // If tools were called, we need to get the synthesized response from Claude
       if (toolCalls.length > 0) {
         const toolResults: Array<{type: string; tool_use_id: string; content: string}> = []
         
@@ -204,12 +205,14 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
         for (let i = 0; i < toolCalls.length; i++) {
           try {
             const result = await this.callMCPTool(toolCalls[i].name, toolCalls[i].input)
+            console.log(`Tool result for ${toolCalls[i].name}:`, result.substring(0, 200))
             toolResults.push({
               type: 'tool_result',
               tool_use_id: toolUseIds[i] || `tool_${i}`,
               content: result
             })
           } catch (error) {
+            console.error(`Tool error for ${toolCalls[i].name}:`, error)
             toolResults.push({
               type: 'tool_result',
               tool_use_id: toolUseIds[i] || `tool_${i}`,
@@ -217,6 +220,8 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
             })
           }
         }
+        
+        console.log('Tool results to send back:', toolResults.length, 'results')
         
         const followUpResponse = await fetch('/claude/messages', {
           method: 'POST',
@@ -229,8 +234,11 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
             model: 'claude-haiku-4-5',
             max_tokens: 1024,
             tools: claudeTools,
-            system: 'You are a tactical AI assistant for Hell Divers 2 command. Format your responses in Markdown with clear sections, bullet points, and emphasis. Use headers, bold, italics, and code blocks as appropriate.',
+            system: `You are a tactical AI assistant for Hell Divers 2 command. You have received tool results and must now provide a complete, direct answer to the user's question based on those results. Format your responses in Markdown with clear sections, bullet points, and emphasis. Use headers, bold, italics, and code blocks as appropriate.
+
+IMPORTANT: After receiving tool results, ALWAYS provide a complete, direct answer to the user's original question. Do not just acknowledge the tools - synthesize the information into a clear response.`,
             messages: [
+              ...this.conversationHistory.slice(0, -2),
               {
                 role: 'user',
                 content: userMessage
@@ -253,6 +261,11 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
 
         const followUpData = await followUpResponse.json()
         
+        console.log('Follow-up response content blocks:', followUpData.content?.length)
+        followUpData.content?.forEach((block: {type: string; text?: string}) => {
+          console.log(`  Block type: ${block.type}${block.text ? ` (text length: ${block.text.length})` : ''}`)
+        })
+        
         let finalText = ''
         for (const block of followUpData.content) {
           if (block.type === 'text') {
@@ -260,28 +273,33 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
           }
         }
         
+        console.log('Final synthesized response length:', finalText.length)
+        
+        const responseToReturn = finalText || 'No response from Claude'
         this.conversationHistory.push({
           role: 'user',
           content: userMessage
         })
         this.conversationHistory.push({
           role: 'assistant',
-          content: finalText || 'No response from Claude'
+          content: responseToReturn
         })
         
-        return finalText || 'No response from Claude'
+        return responseToReturn
       }
 
+      // No tools were needed, return the text response directly
+      const responseToReturn = finalResponse || 'No response from Claude'
       this.conversationHistory.push({
         role: 'user',
         content: userMessage
       })
       this.conversationHistory.push({
         role: 'assistant',
-        content: finalResponse || 'No response from Claude'
+        content: responseToReturn
       })
 
-      return finalResponse || 'No response from Claude'
+      return responseToReturn
     } catch (error) {
       console.error('Error executing command with Claude:', error)
       throw error
