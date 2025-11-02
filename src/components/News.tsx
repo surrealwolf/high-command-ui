@@ -158,7 +158,6 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
 
   const loadDispatches = useCallback(async () => {
     setIsRefreshing(true)
-    const newsItems: NewsItem[] = []
 
     try {
       // Try to fetch from dispatches endpoint
@@ -187,25 +186,14 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
           setLastRefresh(new Date())
           setIsRefreshing(false)
           return
-        } else {
-          // No dispatches available
-          setNews([{
-            id: 'no-dispatches',
-            title: '📡 COMMAND STATUS',
-            content: 'No dispatches at this time.',
-            timestamp: new Date(),
-            priority: 'normal'
-          }])
-          setLastRefresh(new Date())
-          setIsRefreshing(false)
-          return
         }
       }
     } catch (error) {
       console.error('Failed to load dispatches from API:', error)
     }
 
-    setNews(newsItems)
+    // No data available - show placeholder
+    setNews([])
     setLastRefresh(new Date())
     setIsRefreshing(false)
   }, [])
@@ -251,7 +239,8 @@ const News: React.FC<NewsProps> = ({ warStatus }) => {
       <div className="news-feed">
         {news.length === 0 ? (
           <div className="no-news">
-            <p>No dispatches at this time.</p>
+            <p>📡 WAITING FOR INTEL</p>
+            <p style={{ fontSize: '12px', opacity: 0.7 }}>Dispatches and news updates will appear here when available.</p>
           </div>
         ) : (
           news.slice(0, displayLimit).map((item) => (

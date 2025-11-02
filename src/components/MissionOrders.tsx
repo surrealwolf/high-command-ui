@@ -76,26 +76,8 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
       console.error('Failed to load major orders:', error)
     }
     
-    // Fallback: use default missions if API fails or no data
-    const defaultMissions: Mission[] = [
-      {
-        id: '1',
-        title: 'OPERATION: LIBERATION DAWN',
-        objective: 'Eliminate Terminid forces and secure strategic positions. Maintain heavy weapons support.',
-        difficulty: 'Hard',
-        priority: 'critical',
-        status: 'active'
-      },
-      {
-        id: '2',
-        title: 'PLANETARY DEFENSE PROTOCOL',
-        objective: 'Protect civilian installations from Automaton incursions. Establish defensive perimeter.',
-        difficulty: 'Extreme',
-        priority: 'critical',
-        status: 'active'
-      }
-    ]
-    setMissions(defaultMissions)
+    // No data available - show placeholder
+    setMissions([])
     setLastRefresh(new Date())
     setIsRefreshing(false)
   }, [])
@@ -314,7 +296,8 @@ const MissionOrders: React.FC<MissionOrdersProps> = ({ warStatus }) => {
               ))}
             {missions.filter((m) => showActiveOnly ? m.status === 'active' : true).length === 0 && (
               <div className="no-missions">
-                <p>No active assignments at this time.</p>
+                <p>📡 WAITING FOR INTEL</p>
+                <p style={{ fontSize: '12px', opacity: 0.7 }}>Major orders data not yet available. Stand by for command briefing.</p>
               </div>
             )}
           </div>

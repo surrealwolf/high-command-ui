@@ -234,7 +234,7 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
 
 IMPORTANT: After receiving tool results, ALWAYS provide a complete, direct answer to the user's original question. Do not just acknowledge the tools - synthesize the information into a clear response.`,
             messages: [
-              ...this.conversationHistory.slice(0, -2),
+              ...this.conversationHistory,
               {
                 role: 'user',
                 content: userMessage
