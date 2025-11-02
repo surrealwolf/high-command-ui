@@ -205,14 +205,12 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
         for (let i = 0; i < toolCalls.length; i++) {
           try {
             const result = await this.callMCPTool(toolCalls[i].name, toolCalls[i].input)
-            console.log(`Tool result for ${toolCalls[i].name}:`, result.substring(0, 200))
             toolResults.push({
               type: 'tool_result',
               tool_use_id: toolUseIds[i] || `tool_${i}`,
               content: result
             })
           } catch (error) {
-            console.error(`Tool error for ${toolCalls[i].name}:`, error)
             toolResults.push({
               type: 'tool_result',
               tool_use_id: toolUseIds[i] || `tool_${i}`,
@@ -220,8 +218,6 @@ Use clear hierarchy with H2 (##) and H3 (###) headers. Always prioritize markdow
             })
           }
         }
-        
-        console.log('Tool results to send back:', toolResults.length, 'results')
         
         const followUpResponse = await fetch('/claude/messages', {
           method: 'POST',
@@ -261,19 +257,12 @@ IMPORTANT: After receiving tool results, ALWAYS provide a complete, direct answe
 
         const followUpData = await followUpResponse.json()
         
-        console.log('Follow-up response content blocks:', followUpData.content?.length)
-        followUpData.content?.forEach((block: {type: string; text?: string}) => {
-          console.log(`  Block type: ${block.type}${block.text ? ` (text length: ${block.text.length})` : ''}`)
-        })
-        
         let finalText = ''
         for (const block of followUpData.content) {
           if (block.type === 'text') {
             finalText += block.text
           }
         }
-        
-        console.log('Final synthesized response length:', finalText.length)
         
         const responseToReturn = finalText || 'No response from Claude'
         this.conversationHistory.push({
